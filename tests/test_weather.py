@@ -116,3 +116,42 @@ def test_charts_render() -> None:
     detail = demo_detail(BY_SLUG["beijing"], NOW)
     assert len(map_chart(CITIES, overview, "beijing", "°C").data) == 2
     assert len(hourly_chart(detail, "°F").data) >= 4
+
+
+def test_language_dictionaries_cover_same_keys() -> None:
+    from weather_dashboard.i18n import STRINGS
+
+    assert set(STRINGS["en"]) == set(STRINGS["zh"])
+    assert all(STRINGS["en"][key] and STRINGS["zh"][key] for key in STRINGS["en"])
+
+
+def test_chinese_formatting_helpers() -> None:
+    from weather_dashboard.i18n import format_date, region_label, wind_direction_name
+
+    assert format_date(NOW, "zh") == "2026年7月15日 星期三"
+    assert region_label("North", "zh") == "华北"
+    assert wind_direction_name(0, "zh") == "北"
+    assert wind_direction_name(0) == "N"
+
+
+def test_chinese_html_fragments_are_localized() -> None:
+    overview = demo_overview(CITIES, NOW)
+    detail = demo_detail(BY_SLUG["shanghai"], NOW)
+    city = BY_SLUG["shanghai"]
+    unit = "°C"
+
+    fragments = [
+        hero_html(NOW, True, len(CITIES), "zh"),
+        stats_html(overview, BY_SLUG, unit, "zh"),
+        extremes_html(CITIES, overview, unit, "zh"),
+        detail_hero_html(city, detail, unit, "zh"),
+        metrics_html(detail, unit, "zh"),
+        daily_html(detail, unit, "zh"),
+        sun_air_html(detail, unit, "zh"),
+        footer_html("live", "14:30", "zh"),
+    ]
+    joined = "".join(fragments)
+    for copy in ("看遍", "当前最热", "气温阶梯", "中国华东", "体感温度", "今天", "日出", "数据："):
+        assert copy in joined
+    for fragment in fragments:
+        assert not _markdown_breaks(fragment)

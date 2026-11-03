@@ -10,6 +10,16 @@ from typing import Iterable, Sequence
 import plotly.graph_objects as go
 
 from .cities import City, weather_code_info
+from .i18n import (
+    condition_label,
+    format_date,
+    month_day,
+    province_label,
+    region_label,
+    t,
+    weekday_short,
+    wind_direction_name as _wind_direction_name,
+)
 
 UNIT_LABEL = {"°C": "°C", "°F": "°F"}
 
@@ -38,52 +48,34 @@ def temp_decimal(celsius: float, unit: str) -> str:
     return f"{value:.1f}"
 
 
-def wind_direction_name(degrees: float | int) -> str:
-    names = [
-        "N",
-        "NNE",
-        "NE",
-        "ENE",
-        "E",
-        "ESE",
-        "SE",
-        "SSE",
-        "S",
-        "SSW",
-        "SW",
-        "WSW",
-        "W",
-        "WNW",
-        "NW",
-        "NNW",
-    ]
-    return names[int((float(degrees) % 360) / 22.5 + 0.5) % 16]
+def wind_direction_name(degrees: float | int, lang: str = "en") -> str:
+    return _wind_direction_name(degrees, lang)
 
 
-def aqi_info(aqi: int) -> tuple[str, str]:
+def aqi_info(aqi: int, lang: str = "en") -> tuple[str, str]:
     if aqi <= 20:
-        return "Good", "#6ee7b7"
+        return t("aqi_good", lang), "#6ee7b7"
     if aqi <= 40:
-        return "Fair", "#a3e635"
+        return t("aqi_fair", lang), "#a3e635"
     if aqi <= 60:
-        return "Moderate", "#fbbf24"
+        return t("aqi_moderate", lang), "#fbbf24"
     if aqi <= 80:
-        return "Poor", "#fb923c"
+        return t("aqi_poor", lang), "#fb923c"
     if aqi <= 100:
-        return "Very poor", "#f87171"
-    return "Extremely poor", "#c084fc"
+        return t("aqi_very_poor", lang), "#f87171"
+    return t("aqi_extremely_poor", lang), "#c084fc"
 
 
-def uv_info(uv: float) -> tuple[str, str]:
+def uv_info(uv: float, lang: str = "en") -> tuple[str, str]:
     if uv < 3:
-        return "Low", "#6ee7b7"
+        return t("uv_low", lang), "#6ee7b7"
     if uv < 6:
-        return "Moderate", "#fbbf24"
+        return t("uv_moderate", lang), "#fbbf24"
     if uv < 8:
-        return "High", "#fb923c"
+        return t("uv_high", lang), "#fb923c"
     if uv < 11:
-        return "Very high", "#f87171"
-    return "Extreme", "#c084fc"
+        return t("uv_very_high", lang), "#f87171"
+    return t("uv_extreme", lang), "#c084fc"
 
 
 def _kind_glow(kind: str) -> str:
@@ -102,32 +94,40 @@ def _kind_glow(kind: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def hero_html(now: datetime, live: bool, city_count: int) -> str:
+def hero_html(
+    now: datetime,
+    live: bool,
+    city_count: int,
+    lang: str = "en",
+) -> str:
     status = (
-        '<span class="pill"><span class="live-dot"></span> Live data</span>'
+        f'<span class="pill"><span class="live-dot"></span> {t("hero_live", lang)}</span>'
         if live
-        else '<span class="pill"><span class="demo-dot"></span> Demo data</span>'
+        else f'<span class="pill"><span class="demo-dot"></span> {t("hero_demo", lang)}</span>'
     )
     return f"""
 <div class="hero">
-  <div class="hero-kicker"><span class="dot"></span> China Weather Atlas · 中国城市天气</div>
-  <h1>Weather across <span class="grad">China</span>,<br/>city by city.</h1>
+  <div class="hero-kicker"><span class="dot"></span> {t('hero_kicker', lang)}</div>
+  <h1>{t('hero_title', lang)}</h1>
   <p class="hero-sub">
-    A living forecast for {city_count} major cities — from Harbin's frost to Sanya's
-    tropical breeze. Click any city card to open its current conditions, next 24 hours,
-    7-day outlook, air quality and map.
+    {t('hero_sub', lang, city_count=city_count)}
   </p>
   <div class="hero-meta">
-    <span class="pill">🗓️ <strong>{_safe(now.strftime("%A, %B %d, %Y"))}</strong></span>
-    <span class="pill">🕘 <strong>{_safe(now.strftime("%H:%M"))}</strong> China Standard Time</span>
+    <span class="pill">🗓️ <strong>{_safe(format_date(now, lang))}</strong></span>
+    <span class="pill">🕘 <strong>{_safe(now.strftime("%H:%M"))}</strong> {t('hero_timezone', lang)}</span>
     {status}
-    <span class="pill">📍 <strong>{city_count}</strong> cities tracked</span>
+    <span class="pill">📍 <strong>{city_count}</strong> {t('hero_cities', lang)}</span>
   </div>
 </div>
 """
 
 
-def stats_html(overview: dict[str, dict], by_slug: dict[str, City], unit: str) -> str:
+def stats_html(
+    overview: dict[str, dict],
+    by_slug: dict[str, City],
+    unit: str,
+    lang: str = "en",
+) -> str:
     if not overview:
         return ""
     hottest_slug = max(overview, key=lambda slug: overview[slug].get("temp", -99))
@@ -139,13 +139,36 @@ def stats_html(overview: dict[str, dict], by_slug: dict[str, City], unit: str) -
 
     def city_name(slug: str) -> str:
         city = by_slug.get(slug)
-        return city.name_en if city else slug
+        if not city:
+            return slug
+        return city.name_zh if lang == "zh" else city.name_en
 
+    city_count = f"{len(overview)} {t('hero_cities', lang)}"
     items = [
-        ("🔥", "Hottest right now", f"{city_name(hottest_slug)} · {temp_text(hottest['temp'], unit)}", f"Feels like {temp_text(hottest['feels'], unit)}"),
-        ("🧊", "Coldest right now", f"{city_name(coldest_slug)} · {temp_text(coldest['temp'], unit)}", f"Low tonight {temp_text(coldest['low'], unit)}"),
-        ("🌧️", "Highest rain chance", f"{city_name(wettest_slug)} · {wettest['rain_chance']}%", f"Today's maximum probability"),
-        ("🛰️", "Live coverage", f"{len(overview)} cities", "Open-Meteo · refreshed every 10 min"),
+        (
+            "🔥",
+            t("stat_hottest", lang),
+            f"{city_name(hottest_slug)} · {temp_text(hottest['temp'], unit)}",
+            t("stat_feels", lang, temp=temp_text(hottest["feels"], unit)),
+        ),
+        (
+            "🧊",
+            t("stat_coldest", lang),
+            f"{city_name(coldest_slug)} · {temp_text(coldest['temp'], unit)}",
+            t("stat_low_tonight", lang, temp=temp_text(coldest["low"], unit)),
+        ),
+        (
+            "🌧️",
+            t("stat_wettest", lang),
+            f"{city_name(wettest_slug)} · {wettest['rain_chance']}%",
+            t("stat_max_prob", lang),
+        ),
+        (
+            "🛰️",
+            t("stat_coverage", lang),
+            city_count,
+            t("stat_coverage_sub", lang),
+        ),
     ]
     cards = "".join(
         f"""
@@ -165,17 +188,22 @@ def stats_html(overview: dict[str, dict], by_slug: dict[str, City], unit: str) -
 def _heat_color(value: float, low: float, high: float) -> str:
     """Interpolate a cold-to-hot colour for a temperature value."""
     span = max(0.01, high - low)
-    t = max(0.0, min(1.0, (value - low) / span))
+    ratio = max(0.0, min(1.0, (value - low) / span))
     stops = [(0.0, (90, 169, 255)), (0.45, (110, 231, 216)), (0.7, (251, 191, 36)), (1.0, (255, 95, 126))]
     for (p0, c0), (p1, c1) in zip(stops, stops[1:]):
-        if t <= p1:
-            f = (t - p0) / (p1 - p0)
+        if ratio <= p1:
+            f = (ratio - p0) / (p1 - p0)
             rgb = tuple(round(a + (b - a) * f) for a, b in zip(c0, c1))
             return f"rgb{rgb}"
     return "rgb(255, 95, 126)"
 
 
-def extremes_html(cities: Sequence[City], overview: dict[str, dict], unit: str) -> str:
+def extremes_html(
+    cities: Sequence[City],
+    overview: dict[str, dict],
+    unit: str,
+    lang: str = "en",
+) -> str:
     """A compact warmest/coldest ladder that sits beside the map."""
 
     shown = [city for city in cities if city.slug in overview]
@@ -194,10 +222,12 @@ def extremes_html(cities: Sequence[City], overview: dict[str, dict], unit: str) 
         width = 8 + 92 * (temp - low) / max(0.01, high - low)
         info = weather.get("condition") or {}
         rank = ranked.index(city) + 1
+        name = city.name_zh if lang == "zh" else city.name_en
+        condition = condition_label(info, lang)
         return (
             f'<div class="ladder-row"><span class="ladder-rank">{rank:02d}</span>'
-            f'<span class="ladder-name">{_safe(city.name_zh)}'
-            f'<small>{_safe(city.name_en)} · {_safe(info.get("emoji", ""))}</small></span>'
+            f'<span class="ladder-name">{_safe(name)}'
+            f'<small>{_safe(info.get("emoji", ""))} {_safe(condition)}</small></span>'
             f'<span class="ladder-val" style="color:{color}">{temp_text(temp, unit)}</span>'
             f'<span class="ladder-bar"><i style="width:{width:.0f}%;background:{color}"></i></span>'
             "</div>"
@@ -207,13 +237,13 @@ def extremes_html(cities: Sequence[City], overview: dict[str, dict], unit: str) 
     cold_rows = "".join(row(city) for city in cold)
     return (
         '<div class="map-side">'
-        '<div class="map-side-head"><h3>Temperature ladder</h3>'
-        f'<p>Warmest and coldest of the {len(shown)} cities shown.</p></div>'
-        f'<div class="ladder-label"><span>🔥 Warmest</span><span>{temp_text(high, unit)}</span></div>'
+        f'<div class="map-side-head"><h3>{t("ladder_title", lang)}</h3>'
+        f'<p>{t("ladder_sub", lang, count=len(shown))}</p></div>'
+        f'<div class="ladder-label"><span>{t("ladder_warm", lang)}</span><span>{temp_text(high, unit)}</span></div>'
         f'{warm_rows}'
-        f'<div class="ladder-label cold"><span>🧊 Coldest</span><span>{temp_text(low, unit)}</span></div>'
+        f'<div class="ladder-label cold"><span>{t("ladder_cold", lang)}</span><span>{temp_text(low, unit)}</span></div>'
         f'{cold_rows}'
-        '<div class="map-side-foot">Click any city card above for its full forecast.</div>'
+        f'<div class="map-side-foot">{t("ladder_foot", lang)}</div>'
         "</div>"
     )
 
@@ -252,14 +282,21 @@ def city_card_css(overview: dict[str, dict], cities: Sequence[City]) -> str:
     return "<style>" + "".join(rules) + "</style>"
 
 
-def city_labels(city: City, weather: dict, unit: str) -> tuple[str, str]:
+def city_labels(
+    city: City,
+    weather: dict,
+    unit: str,
+    lang: str = "en",
+) -> tuple[str, str]:
     info = weather.get("condition") or weather_code_info(weather.get("code", 0), True)
+    name = city.name_zh if lang == "zh" else city.name_en
+    condition = condition_label(info, lang)
     label = (
-        f"{info['emoji']} {city.name_zh}  \n"
-        f"{temp_text(weather['temp'], unit)} · {info['label_zh']}"
+        f"{info['emoji']} {name}  \n"
+        f"{temp_text(weather['temp'], unit)} · {condition}"
     )
     foot = (
-        f"<div class='city-foot'><span>{_safe(city.name_en)}</span>"
+        f"<div class='city-foot'><span>{_safe(province_label(city.province, lang))}</span>"
         f"<span>{temp_text(weather['high'], unit)} / {temp_text(weather['low'], unit)}"
         f" · 💧 {weather['humidity']}%</span></div>"
     )
@@ -271,38 +308,54 @@ def city_labels(city: City, weather: dict, unit: str) -> tuple[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def detail_hero_html(city: City, detail: dict, unit: str) -> str:
+def detail_hero_html(
+    city: City,
+    detail: dict,
+    unit: str,
+    lang: str = "en",
+) -> str:
     current = detail["current"]
     info = current["condition"]
     updated = current.get("time", "")[11:16]
+    zh = lang == "zh"
+    primary_name = city.name_zh if zh else city.name_en
+    secondary_name = city.name_en if zh else city.name_zh
+    primary_condition = info["label_zh"] if zh else info["label_en"]
+    secondary_condition = info["label_en"] if zh else info["label_zh"]
+    current_label = condition_label(weather_code_info(current["code"], True), lang)
     return f"""
 <div class="detail-hero" style="--glow: {_kind_glow(info['kind'])};">
   <div>
-    <div class="crumb">{_safe(city.region)} China · {_safe(city.province)}</div>
-    <h1>{_safe(city.name_zh)}<span>{_safe(city.name_en)}</span></h1>
+    <div class="crumb">{t('crumb', lang, region=_safe(region_label(city.region, lang)), province=_safe(province_label(city.province, lang)))}</div>
+    <h1>{_safe(primary_name)}<span>{_safe(secondary_name)}</span></h1>
     <div class="detail-cond">
       <span>{info['emoji']}</span>
-      <span class="zh">{_safe(info['label_zh'])}</span>
-      <span class="en">{_safe(info['label_en'])}</span>
+      <span class="zh">{_safe(primary_condition)}</span>
+      <span class="en">{_safe(secondary_condition)}</span>
     </div>
     <div class="detail-chips">
-      <span class="chip">Feels like <b>{temp_text(current['feels'], unit)}</b></span>
-      <span class="chip">H <b>{temp_text(current['high'], unit)}</b> / L <b>{temp_text(current['low'], unit)}</b></span>
-      <span class="chip">💧 <b>{current['humidity']}%</b> humidity</span>
-      <span class="chip">💨 <b>{current['wind']:.0f} km/h</b> {_safe(wind_direction_name(current['wind_dir']))}</span>
-      <span class="chip">🌧️ <b>{current['rain_chance']}%</b> rain</span>
+      <span class="chip">{t('chip_feels', lang, temp=temp_text(current['feels'], unit))}</span>
+      <span class="chip">{t('chip_high_low', lang, high=temp_text(current['high'], unit), low=temp_text(current['low'], unit))}</span>
+      <span class="chip">{t('chip_humidity', lang, value=current['humidity'])}</span>
+      <span class="chip">{t('chip_wind', lang, value=f"{current['wind']:.0f}", direction=_safe(wind_direction_name(current['wind_dir'], lang)))}</span>
+      <span class="chip">{t('chip_rain', lang, value=current['rain_chance'])}</span>
     </div>
   </div>
   <div class="now-panel">
     <div class="now-emoji">{info['emoji']}</div>
     <div class="temp-now">{temp_text(current['temp'], unit)}<sup>{unit}</sup></div>
-    <div class="updated">Updated {_safe(updated)} CST · {_safe(weather_code_info(current['code'], True)['label_en'])}</div>
+    <div class="updated">{t('now_updated', lang, time=_safe(updated), condition=_safe(current_label))}</div>
   </div>
 </div>
 """
 
 
-def alerts_html(city: City, detail: dict, unit: str) -> str:
+def alerts_html(
+    city: City,
+    detail: dict,
+    unit: str,
+    lang: str = "en",
+) -> str:
     current = detail["current"]
     daily = detail["daily"]
     air = detail.get("air") or {}
@@ -314,21 +367,21 @@ def alerts_html(city: City, detail: dict, unit: str) -> str:
     wind = daily["wind_max"][0] if daily["wind_max"] else current["wind"]
 
     if current["condition"]["kind"] == "storm":
-        alerts.append(("danger", "⛈️", "Thunderstorms in the area", "Lightning and heavy showers are possible. Keep an eye on local alerts before heading out."))
+        alerts.append(("danger", "⛈️", t("alert_storm_title", lang), t("alert_storm_body", lang)))
     if high >= 35:
-        alerts.append(("danger", "🥵", "Heat advisory", f"Today's high reaches {temp_text(high, unit)}. Hydrate often and avoid the midday sun."))
+        alerts.append(("danger", "🥵", t("alert_heat_title", lang), t("alert_heat_body", lang, temp=temp_text(high, unit))))
     elif high >= 32:
-        alerts.append(("info", "☀️", "A hot one", f"Today's high is {temp_text(high, unit)}. Plan outdoor time for the morning or evening."))
+        alerts.append(("info", "☀️", t("alert_hot_title", lang), t("alert_hot_body", lang, temp=temp_text(high, unit))))
     if low <= -5:
-        alerts.append(("info", "🧣", "Bundle up", f"Tonight drops to {temp_text(low, unit)}. Wind chill will make it feel colder."))
+        alerts.append(("info", "🧣", t("alert_cold_title", lang), t("alert_cold_body", lang, temp=temp_text(low, unit))))
     if rain >= 60:
-        alerts.append(("info", "☔", "Rain likely", f"{rain}% chance of precipitation today — an umbrella is a good idea."))
+        alerts.append(("info", "☔", t("alert_rain_title", lang), t("alert_rain_body", lang, rain=rain)))
     if wind >= 40:
-        alerts.append(("info", "💨", "Windy conditions", f"Gusts up to {wind:.0f} km/h are forecast. Secure loose items outdoors."))
+        alerts.append(("info", "💨", t("alert_wind_title", lang), t("alert_wind_body", lang, wind=f"{wind:.0f}")))
     aqi = air.get("european_aqi", 0)
     if aqi >= 80:
-        label, _ = aqi_info(aqi)
-        alerts.append(("danger", "😷", f"Air quality: {label}", f"European AQI is {aqi}. Consider reducing strenuous outdoor activity."))
+        label, _ = aqi_info(aqi, lang)
+        alerts.append(("danger", "😷", t("alert_aqi_title", lang, label=label), t("alert_aqi_body", lang, aqi=aqi)))
 
     if not alerts:
         return ""
@@ -370,26 +423,26 @@ def _metric(
     )
 
 
-def metrics_html(detail: dict, unit: str) -> str:
+def metrics_html(detail: dict, unit: str, lang: str = "en") -> str:
     current = detail["current"]
-    daily = detail["daily"]
     air = detail.get("air") or {}
     uv = current.get("uv", 0)
-    uv_label, uv_color = uv_info(uv)
+    uv_label, uv_color = uv_info(uv, lang)
     aqi = air.get("european_aqi")
-    aqi_label, aqi_color = aqi_info(aqi) if aqi is not None else ("—", "#96a2c8")
+    aqi_label, aqi_color = aqi_info(aqi, lang) if aqi is not None else ("—", "#96a2c8")
     rain = current.get("rain_chance", 0)
     visibility = current.get("visibility", 0)
+    direction = wind_direction_name(current["wind_dir"], lang)
 
     items = [
-        _metric("🌡️", "Feels like", f"{temp_text(current['feels'], unit)}<small>{unit}</small>", f"Actual {temp_text(current['temp'], unit)}", None),
-        _metric("💧", "Humidity", f"{current['humidity']}%", "Relative humidity", current["humidity"]),
-        _metric("💨", "Wind", f"{current['wind']:.0f}<small> km/h</small>", f"From {wind_direction_name(current['wind_dir'])} · {current['wind_dir']}°", min(100, current["wind"] * 2.2)),
-        _metric("🧭", "Pressure", f"{current['pressure']:.0f}<small> hPa</small>", "Surface pressure", (current["pressure"] - 980) / 60 * 100),
-        _metric("👁️", "Visibility", f"{visibility:.0f}<small> km</small>", "Horizontal visibility", min(100, visibility / 25 * 100)),
-        _metric("🕶️", "UV index", f"{uv:.1f}", f"{uv_label} exposure", min(100, uv / 11 * 100), uv_color),
-        _metric("☔", "Rain chance", f"{rain}%", "Maximum today", rain),
-        _metric("🍃", "Air quality", f"{aqi if aqi is not None else '—'}<small> EAQI</small>", aqi_label, min(100, (aqi or 0) / 160 * 100), aqi_color),
+        _metric("🌡️", t("metric_feels", lang), f"{temp_text(current['feels'], unit)}<small>{unit}</small>", t("metric_actual", lang, temp=temp_text(current['temp'], unit)), None),
+        _metric("💧", t("metric_humidity", lang), f"{current['humidity']}%", t("metric_relative_humidity", lang), current["humidity"]),
+        _metric("💨", t("metric_wind", lang), f"{current['wind']:.0f}<small> km/h</small>", t("metric_from", lang, direction=direction, degrees=current['wind_dir']), min(100, current["wind"] * 2.2)),
+        _metric("🧭", t("metric_pressure", lang), f"{current['pressure']:.0f}<small> hPa</small>", t("metric_surface_pressure", lang), (current["pressure"] - 980) / 60 * 100),
+        _metric("👁️", t("metric_visibility", lang), f"{visibility:.0f}<small> km</small>", t("metric_horizontal_visibility", lang), min(100, visibility / 25 * 100)),
+        _metric("🕶️", t("metric_uv", lang), f"{uv:.1f}", t("metric_uv_sub", lang, label=uv_label), min(100, uv / 11 * 100), uv_color),
+        _metric("☔", t("metric_rain", lang), f"{rain}%", t("metric_rain_sub", lang), rain),
+        _metric("🍃", t("metric_air", lang), f"{aqi if aqi is not None else '—'}<small> EAQI</small>", aqi_label, min(100, (aqi or 0) / 160 * 100), aqi_color),
     ]
     return f'<div class="metrics">{"".join(items)}</div>'
 
@@ -399,10 +452,10 @@ def metrics_html(detail: dict, unit: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def daily_html(detail: dict, unit: str) -> str:
+def daily_html(detail: dict, unit: str, lang: str = "en") -> str:
     daily = detail["daily"]
     if not daily["time"]:
-        return "<p>No daily forecast available.</p>"
+        return f"<p>{t('no_daily', lang)}</p>"
 
     week_low = min(daily["low"])
     week_high = max(daily["high"])
@@ -418,16 +471,22 @@ def daily_html(detail: dict, unit: str) -> str:
         low = daily["low"][index]
         left = max(0.0, min(100.0, (low - week_low) / span * 100))
         width = max(5.0, min(100.0 - left, (high - low) / span * 100))
-        name = "Today" if index == 0 else (day.strftime("%a") if day else date_text)
-        date_label = day.strftime("%b %d") if day else ""
+        if index == 0:
+            name = t("day_today", lang)
+        elif day:
+            name = weekday_short(day, lang)
+        else:
+            name = date_text
+        date_label = month_day(day, lang) if day else ""
         rain = daily["rain_chance"][index]
+        condition = condition_label(info, lang)
         cards.append(
             f"""
         <div class="day-card{' today' if index == 0 else ''}">
           <div class="day-name">{_safe(name)}</div>
           <div class="day-date">{_safe(date_label)}</div>
           <div class="day-icon">{info['day_emoji']}</div>
-          <div class="day-cond" title="{_safe(info['label_en'])}">{_safe(info['label_en'])}</div>
+          <div class="day-cond" title="{_safe(condition)}">{_safe(condition)}</div>
           <div class="day-temps">{temp_text(high, unit)} <span class="lo">/ {temp_text(low, unit)}</span></div>
           <div class="day-range"><span style="left:{left:.0f}%;width:{width:.0f}%"></span></div>
           <div class="day-rain">💧 {rain}%</div>
@@ -458,7 +517,11 @@ def _base_layout(height: int = 370) -> dict:
     )
 
 
-def hourly_chart(detail: dict, unit: str = "°C") -> go.Figure:
+def hourly_chart(
+    detail: dict,
+    unit: str = "°C",
+    lang: str = "en",
+) -> go.Figure:
     hourly = detail["hourly"]
     times = [datetime.fromisoformat(t) for t in hourly["time"]]
     temps = hourly["temp"]
@@ -486,10 +549,10 @@ def hourly_chart(detail: dict, unit: str = "°C") -> go.Figure:
         go.Bar(
             x=times,
             y=rain,
-            name="Rain chance",
+            name=t("chart_rain_chance", lang),
             marker=dict(color="rgba(110, 231, 216, 0.20)", line=dict(width=0)),
             yaxis="y2",
-            hovertemplate="Rain chance %{y}%<extra></extra>",
+            hovertemplate=f"{t('chart_rain_chance', lang)} %{{y}}%<extra></extra>",
         )
     )
 
@@ -511,18 +574,18 @@ def hourly_chart(detail: dict, unit: str = "°C") -> go.Figure:
             x=times,
             y=converted,
             mode="lines+markers",
-            name="Temperature",
+            name=t("chart_temperature", lang),
             line=dict(color="#8fa8ff", width=3, shape="spline"),
             marker=dict(size=4, color="#c9d6ff", line=dict(color="#8fa8ff", width=1)),
             fill="tonexty",
             fillcolor="rgba(124, 155, 255, 0.13)",
             customdata=list(zip(feels_converted, humidity, wind, precip)),
             hovertemplate=(
-                f"<b>%{{x|%H:%M}}</b><br>Temperature %{{y:.0f}}{unit}<br>"
-                f"Feels like %{{customdata[0]:.0f}}{unit}<br>"
-                "Humidity %{customdata[1]}%<br>"
-                "Wind %{customdata[2]:.0f} km/h<br>"
-                "Rain %{customdata[3]:.1f} mm<extra></extra>"
+                f"<b>%{{x|%H:%M}}</b><br>{t('chart_temperature', lang)} %{{y:.0f}}{unit}<br>"
+                f"{t('chart_feels', lang)} %{{customdata[0]:.0f}}{unit}<br>"
+                f"{t('chart_humidity', lang)} %{{customdata[1]}}%<br>"
+                f"{t('chart_wind', lang)} %{{customdata[2]:.0f}} km/h<br>"
+                f"{t('chart_rain', lang)} %{{customdata[3]:.1f}} mm<extra></extra>"
             ),
         )
     )
@@ -541,7 +604,7 @@ def hourly_chart(detail: dict, unit: str = "°C") -> go.Figure:
     layout = _base_layout(380)
     layout.update(
         yaxis=dict(
-            title=dict(text=f"Temperature ({unit})", font=dict(size=11, color="#6c789e")),
+            title=dict(text=t("chart_temp_axis", lang, unit=unit), font=dict(size=11, color="#6c789e")),
             gridcolor="rgba(148,163,255,0.09)",
             zeroline=False,
             tickfont=dict(size=11),
@@ -575,6 +638,7 @@ def map_chart(
     overview: dict[str, dict],
     selected_slug: str,
     unit: str,
+    lang: str = "en",
 ) -> go.Figure:
     shown = [city for city in cities if city.slug in overview]
     temps = [convert_temp(overview[city.slug]["temp"], unit) for city in shown]
@@ -613,10 +677,10 @@ def map_chart(
                 ),
                 line=dict(color="rgba(255,255,255,0.55)", width=0.8),
             ),
-            text=[city.name_en for city in shown],
+            text=[city.name_zh if lang == "zh" else city.name_en for city in shown],
             customdata=[
                 [
-                    overview[city.slug]["condition"]["label_en"],
+                    condition_label(overview[city.slug]["condition"], lang),
                     temp_text(overview[city.slug]["high"], unit),
                     temp_text(overview[city.slug]["low"], unit),
                     overview[city.slug]["humidity"],
@@ -625,8 +689,8 @@ def map_chart(
             ],
             hovertemplate=(
                 "<b>%{text}</b><br>%{customdata[0]}<br>"
-                "Now %{marker.color:.0f}" + unit + "<br>"
-                "H %{customdata[1]} / L %{customdata[2]} · 💧 %{customdata[3]}%<extra></extra>"
+                f"{t('chart_now', lang)} %{{marker.color:.0f}}" + unit + "<br>"
+                f"{t('chart_high', lang)} %{{customdata[1]}} / {t('chart_low', lang)} %{{customdata[2]}} · 💧 %{{customdata[3]}}%<extra></extra>"
             ),
         )
     )
@@ -644,10 +708,10 @@ def map_chart(
                     symbol="star",
                     line=dict(color="#ffd06b", width=2),
                 ),
-                text=[selected.name_zh],
+                text=[selected.name_zh if lang == "zh" else selected.name_en],
                 textposition="top center",
                 textfont=dict(color="#ffffff", size=13),
-                hovertext=f"{selected.name_en} · {temp_text(weather['temp'], unit)}",
+                hovertext=f"{selected.name_zh if lang == 'zh' else selected.name_en} · {temp_text(weather['temp'], unit)}",
                 hoverinfo="text",
                 showlegend=False,
             )
@@ -690,9 +754,12 @@ def map_chart(
 # ---------------------------------------------------------------------------
 
 
-def sun_air_html(detail: dict, unit: str) -> str:
+def sun_air_html(detail: dict, unit: str, lang: str = "en") -> str:
     daily = detail["daily"]
     air = detail.get("air")
+    condition = condition_label(detail["current"]["condition"], lang)
+    if lang != "zh":
+        condition = condition.lower()
 
     if daily["sunrise"] and daily["sunset"]:
         try:
@@ -713,22 +780,22 @@ def sun_air_html(detail: dict, unit: str) -> str:
         daylight = 0
 
     sun_html = f"""<div class="info-card">
-      <h3>🌅 Sun & daylight</h3>
-      <div class="sub">Today's solar window in {_safe(detail['current']['condition']['label_en'].lower())} skies</div>
+      <h3>{t('sun_title', lang)}</h3>
+      <div class="sub">{t('sun_sub', lang, condition=_safe(condition))}</div>
       <div class="sun-row">
-        <div class="sun-item"><span class="k">Sunrise</span><span class="v">{sunrise.strftime('%H:%M') if sunrise else '—'}</span></div>
-        <div class="sun-item" style="text-align:right"><span class="k">Sunset</span><span class="v">{sunset.strftime('%H:%M') if sunset else '—'}</span></div>
+        <div class="sun-item"><span class="k">{t('sunrise', lang)}</span><span class="v">{sunrise.strftime('%H:%M') if sunrise else '—'}</span></div>
+        <div class="sun-item" style="text-align:right"><span class="k">{t('sunset', lang)}</span><span class="v">{sunset.strftime('%H:%M') if sunset else '—'}</span></div>
       </div>
       <div class="sun-track"><div class="sun-dot" style="left:{progress:.1f}%"></div></div>
       <div class="sun-row" style="margin-top:8px">
-        <div class="sun-item"><span class="k">Daylight</span><span class="v">{daylight:.1f} hours</span></div>
-        <div class="sun-item" style="text-align:right"><span class="k">UV peak</span><span class="v">{daily['uv'][0] if daily['uv'] else 0:.1f}</span></div>
+        <div class="sun-item"><span class="k">{t('daylight', lang)}</span><span class="v">{t('daylight_value', lang, hours=daylight)}</span></div>
+        <div class="sun-item" style="text-align:right"><span class="k">{t('uv_peak', lang)}</span><span class="v">{daily['uv'][0] if daily['uv'] else 0:.1f}</span></div>
       </div>
     </div>"""
 
     if air:
         aqi = air.get("european_aqi", 0)
-        label, color = aqi_info(aqi)
+        label, color = aqi_info(aqi, lang)
         pollutants = [
             ("PM2.5", air.get("pm2_5", 0), 150, "#6ee7ff"),
             ("PM10", air.get("pm10", 0), 250, "#8fa8ff"),
@@ -741,30 +808,30 @@ def sun_air_html(detail: dict, unit: str) -> str:
             for name, value, limit, bar_color in pollutants
         )
         air_html = f"""<div class="info-card">
-          <h3>🍃 Air quality</h3>
-          <div class="sub">European AQI · updated hourly</div>
+          <h3>{t('air_title', lang)}</h3>
+          <div class="sub">{t('air_sub', lang)}</div>
           <div class="aqi-head">
             <div class="aqi-value" style="color:{color}">{aqi}</div>
             <div class="aqi-tag" style="color:{color}">{label}</div>
           </div>
-          <div class="sub" style="margin-top:6px">US AQI {air.get('us_aqi', '—')} · {air.get('time', '')[11:16]} CST</div>
+          <div class="sub" style="margin-top:6px">{t('air_us', lang, aqi=air.get('us_aqi', '—'), time=air.get('time', '')[11:16])}</div>
           {rows}
         </div>"""
     else:
-        air_html = """<div class="info-card">
-          <h3>🍃 Air quality</h3>
-          <div class="sub">Air quality data is unavailable right now.</div>
+        air_html = f"""<div class="info-card">
+          <h3>{t('air_title', lang)}</h3>
+          <div class="sub">{t('air_unavailable', lang)}</div>
           <div class="aqi-head"><div class="aqi-value" style="color:#96a2c8">—</div></div>
-          <div class="sub" style="margin-top:10px">The forecast above is still live.</div>
+          <div class="sub" style="margin-top:10px">{t('air_still_live', lang)}</div>
         </div>"""
 
     return f'<div class="duo">{sun_html}{air_html}</div>'
 
 
-def footer_html(source: str, updated: str) -> str:
-    mode = "Demo data" if source == "demo" else "Live Open-Meteo data"
+def footer_html(source: str, updated: str, lang: str = "en") -> str:
+    mode = t("footer_demo" if source == "demo" else "footer_live", lang)
     return f"""
 <div class="app-footer">
-  <span>Data: <b>{mode}</b> · Updated {_safe(updated)} CST · Cached for 10 minutes</span>
-  <span>Built with <b>Streamlit</b> + <b>Plotly</b> · 中国城市天气</span>
+  <span>{t('footer_line', lang, mode=mode, updated=_safe(updated))}</span>
+  <span>{t('footer_built', lang)}</span>
 </div>"""

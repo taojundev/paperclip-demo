@@ -732,6 +732,20 @@ h1, h2, h3, h4, h5, h6,
     text-align: center;
     white-space: normal;
 }
+
+/* Language toggle sits above the brand and is always one click away. */
+.st-key-lang_toggle { margin-bottom: 12px; }
+.st-key-lang_toggle button {
+    background: linear-gradient(120deg, rgba(124, 155, 255, 0.26), rgba(110, 231, 216, 0.16)) !important;
+    border: 1px solid rgba(148, 163, 255, 0.36) !important;
+    color: #eef2ff !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em;
+}
+.st-key-lang_toggle button:hover {
+    border-color: rgba(110, 231, 216, 0.62) !important;
+    box-shadow: 0 8px 22px rgba(60, 80, 220, 0.28);
+}
 [data-testid="stSidebar"] .stTextInput input,
 [data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] > div {
     background: rgba(255, 255, 255, 0.045);

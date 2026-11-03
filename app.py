@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import random
 from datetime import datetime
 from typing import Sequence
@@ -35,6 +36,7 @@ from weather_dashboard.components import (
     stats_html,
     sun_air_html,
 )
+from weather_dashboard.i18n import DEFAULT_LANGUAGE, region_label, t
 from weather_dashboard.styles import CSS
 
 TIMEZONE = ZoneInfo("Asia/Shanghai")
@@ -77,6 +79,14 @@ def now_china() -> datetime:
     return datetime.now(TIMEZONE)
 
 
+def current_language() -> str:
+    """Return the active UI language, initialising English on first load."""
+
+    if "language" not in st.session_state:
+        st.session_state["language"] = DEFAULT_LANGUAGE
+    return st.session_state["language"]
+
+
 def selected_city_from_query() -> City | None:
     raw = st.query_params.get("city")
     if isinstance(raw, (list, tuple)):
@@ -117,34 +127,37 @@ def render_map_section(
     overview: dict[str, dict],
     unit: str,
     selected_slug: str = "",
+    lang: str = DEFAULT_LANGUAGE,
 ) -> None:
     """Show the weather map beside the warmest/coldest ladder."""
 
     map_column, side_column = st.columns([2.15, 1], gap="medium")
     with map_column:
         st.plotly_chart(
-            map_chart(cities, overview, selected_slug, unit),
+            map_chart(cities, overview, selected_slug, unit, lang),
             width="stretch",
             theme=None,
             config=PLOT_CONFIG,
         )
     with side_column:
-        st.markdown(extremes_html(cities, overview, unit), unsafe_allow_html=True)
+        st.markdown(
+            extremes_html(cities, overview, unit, lang),
+            unsafe_allow_html=True,
+        )
 
 
-def source_alert(error: str | None) -> None:
+def source_alert(error: str | None, lang: str = DEFAULT_LANGUAGE) -> None:
     if not error:
         return
     st.markdown(
-        """
+        f"""
         <div class="alert info">
           <span class="a-icon">🛰️</span>
-          <div><b>Showing demo weather.</b> Live Open-Meteo data could not be reached,
-          so this page is using a realistic offline fallback. Try refreshing in a moment.</div>
+          <div><b>{t('demo_title', lang)}</b> {t('demo_body', lang)}</div>
         </div>""",
         unsafe_allow_html=True,
     )
-    with st.expander("Technical details"):
+    with st.expander(t("technical_details", lang)):
         st.code(error)
 
 
@@ -157,23 +170,39 @@ def render_sidebar(
     overview: dict[str, dict],
     error: str | None,
     unit: str,
+    lang: str,
 ) -> tuple[str, str, list[str]]:
     with st.sidebar:
         st.markdown(
-            """
+            f'<div class="side-label" style="margin-top:0">{t("language_label", lang)}</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button(
+            t("language_button", lang),
+            key="lang_toggle",
+            width="stretch",
+            help="切换中文 / Switch to English",
+        ):
+            st.session_state["language"] = "zh" if lang == "en" else "en"
+            st.rerun()
+
+        st.markdown(
+            f"""
             <div class="side-brand">
               <div class="side-logo">🌤️</div>
-              <div class="side-title">China Weather<span>Atlas · 中国城市天气</span></div>
+              <div class="side-title">{t('brand_title', lang)}<span>{t('brand_subtitle', lang)}</span></div>
             </div>
-            <div class="side-copy">Current conditions and forecasts for major cities,
-            from the northeast frontier to the tropical south.</div>
+            <div class="side-copy">{t('side_copy', lang)}</div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown('<div class="side-label">Temperature unit</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="side-label">{t("temperature_unit", lang)}</div>',
+            unsafe_allow_html=True,
+        )
         picked_unit = st.segmented_control(
-            "Temperature unit",
+            t("temperature_unit", lang),
             options=["°C", "°F"],
             default=unit,
             required=True,
@@ -182,65 +211,58 @@ def render_sidebar(
         )
         unit = picked_unit or "°C"
 
-        st.markdown('<div class="side-label">Search cities</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="side-label">{t("search_cities", lang)}</div>',
+            unsafe_allow_html=True,
+        )
         query = st.text_input(
-            "Search cities",
-            placeholder="Beijing, 上海, Chengdu…",
+            t("search_cities", lang),
+            placeholder=t("search_placeholder", lang),
             label_visibility="collapsed",
         )
 
-        st.markdown('<div class="side-label">Regions</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="side-label">{t("regions", lang)}</div>',
+            unsafe_allow_html=True,
+        )
         regions = st.multiselect(
-            "Regions",
+            t("regions", lang),
             options=list(REGIONS),
             default=[],
-            placeholder="All regions",
+            placeholder=t("all_regions", lang),
             label_visibility="collapsed",
+            format_func=lambda region: region_label(region, lang),
         )
 
         status_class = "live" if not error else "demo"
-        status_text = "Live · Open-Meteo" if not error else "Demo fallback"
+        status_text = t("status_live" if not error else "status_demo", lang)
         updated = next(iter(overview.values()), {}).get("time", "")[11:16] if overview else "—"
         st.markdown(
             f"""
             <div class="side-status">
-              <div class="row"><span>Source</span><b class="{status_class}">{status_text}</b></div>
-              <div class="row"><span>Cities</span><b>{len(overview)}</b></div>
-              <div class="row"><span>Updated</span><b>{updated or '—'} CST</b></div>
-              <div class="row"><span>Cache</span><b>10 minutes</b></div>
+              <div class="row"><span>{t('source', lang)}</span><b class="{status_class}">{status_text}</b></div>
+              <div class="row"><span>{t('cities', lang)}</span><b>{len(overview)}</b></div>
+              <div class="row"><span>{t('updated', lang)}</span><b>{updated or '—'} {t('cst', lang)}</b></div>
+              <div class="row"><span>{t('cache', lang)}</span><b>{t('cache_value', lang)}</b></div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        if st.button("↻ Refresh live data", width="stretch"):
+        if st.button(t("refresh", lang), width="stretch"):
             st.cache_data.clear()
             st.rerun()
 
-        if st.button("🎲 Surprise me", width="stretch"):
+        if st.button(t("surprise", lang), width="stretch"):
             open_city(random.choice(CITIES).slug)
 
         st.markdown(
-            """
-            <div class="side-foot">
-              Powered by <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a>.
-              Forecasts cover the next 24 hours and 7 days.
-            </div>
-            """,
+            f'<div class="side-foot">{t("side_footer", lang)}</div>',
             unsafe_allow_html=True,
         )
 
-        with st.expander("About this dashboard"):
-            st.markdown(
-                """
-                **35 major cities**, one dashboard.
-
-                - Click any city card to open its detailed forecast
-                - Temperature units can be switched here at any time
-                - Data refreshes every 10 minutes, with an offline demo fallback
-                - Air quality comes from the Open-Meteo Air Quality API
-                """
-            )
+        with st.expander(t("about_title", lang)):
+            st.markdown(t("about_body", lang))
 
     return unit, query, regions
 
@@ -250,19 +272,24 @@ def render_sidebar(
 # ---------------------------------------------------------------------------
 
 
-def render_overview(overview: dict[str, dict], error: str | None, unit: str) -> None:
+def render_overview(
+    overview: dict[str, dict],
+    error: str | None,
+    unit: str,
+    lang: str,
+) -> None:
     now = now_china()
-    st.markdown(hero_html(now, error is None, len(CITIES)), unsafe_allow_html=True)
-    source_alert(error)
-    st.markdown(stats_html(overview, CITY_BY_SLUG, unit), unsafe_allow_html=True)
+    st.markdown(hero_html(now, error is None, len(CITIES), lang), unsafe_allow_html=True)
+    source_alert(error, lang)
+    st.markdown(stats_html(overview, CITY_BY_SLUG, unit, lang), unsafe_allow_html=True)
 
     section = f"""
     <div class="section-head">
       <div>
-        <h2>Major cities · 主要城市</h2>
-        <p>Click a city card to open its current conditions and forecast.</p>
+        <h2>{t('major_title', lang)}</h2>
+        <p>{t('major_sub', lang)}</p>
       </div>
-      <span class="section-note">{len(CITIES)} cities · {now.strftime('%H:%M')} CST</span>
+      <span class="section-note">{t('major_note', lang, count=len(CITIES), time=now.strftime('%H:%M'))}</span>
     </div>"""
     st.markdown(section, unsafe_allow_html=True)
 
@@ -281,31 +308,35 @@ def render_overview(overview: dict[str, dict], error: str | None, unit: str) -> 
             weather = overview.get(city.slug)
             if not weather:
                 continue
-            label, foot = city_labels(city, weather, unit)
+            label, foot = city_labels(city, weather, unit, lang)
+            city_name = city.name_zh if lang == "zh" else city.name_en
             with columns[index % 4]:
                 if st.button(
                     label,
                     key=f"city_{city.slug}",
                     width="stretch",
-                    help=f"Open the {city.name_en} forecast",
+                    help=t("help_open_city", lang, city=city_name),
                 ):
                     open_city(city.slug)
                 st.markdown(foot, unsafe_allow_html=True)
 
     st.markdown(
-        """
+        f"""
         <div class="section-head">
           <div>
-            <h2>Weather map · 天气地图</h2>
-            <p>Marker colour shows current temperature. Hover a city for today's range.</p>
+            <h2>{t('map_title', lang)}</h2>
+            <p>{t('map_sub', lang)}</p>
           </div>
-          <span class="section-note">Open-Meteo · Asia/Shanghai</span>
+          <span class="section-note">{t('map_note', lang)}</span>
         </div>""",
         unsafe_allow_html=True,
     )
-    render_map_section(CITIES, overview, unit)
+    render_map_section(CITIES, overview, unit, lang=lang)
     updated = next(iter(overview.values()), {}).get("time", "")[11:16]
-    st.markdown(footer_html("demo" if error else "live", updated or now.strftime("%H:%M")), unsafe_allow_html=True)
+    st.markdown(
+        footer_html("demo" if error else "live", updated or now.strftime("%H:%M"), lang),
+        unsafe_allow_html=True,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -313,87 +344,89 @@ def render_overview(overview: dict[str, dict], error: str | None, unit: str) -> 
 # ---------------------------------------------------------------------------
 
 
-def render_detail(city: City, overview: dict[str, dict], unit: str) -> None:
+def render_detail(city: City, overview: dict[str, dict], unit: str, lang: str) -> None:
     detail, error = load_detail(city.slug)
     now = now_china()
+    city_name = city.name_zh if lang == "zh" else city.name_en
 
-    if st.button("← All cities", key="back_btn"):
+    if st.button(t("back", lang), key="back_btn"):
         st.query_params.clear()
         st.rerun()
 
-    st.markdown(detail_hero_html(city, detail, unit), unsafe_allow_html=True)
-    source_alert(error)
-    st.markdown(alerts_html(city, detail, unit), unsafe_allow_html=True)
-    st.markdown(metrics_html(detail, unit), unsafe_allow_html=True)
+    st.markdown(detail_hero_html(city, detail, unit, lang), unsafe_allow_html=True)
+    source_alert(error, lang)
+    st.markdown(alerts_html(city, detail, unit, lang), unsafe_allow_html=True)
+    st.markdown(metrics_html(detail, unit, lang), unsafe_allow_html=True)
 
     st.markdown(
         f"""
         <div class="section-head">
           <div>
-            <h2>7-day forecast · 未来七天</h2>
-            <p>Daily highs, lows and rain probability for {city.name_zh}.</p>
+            <h2>{t('daily_title', lang)}</h2>
+            <p>{t('daily_sub', lang, city=city_name)}</p>
           </div>
-          <span class="section-note">Updated {detail['time'][11:16]} CST</span>
+          <span class="section-note">{t('daily_note', lang, time=detail['time'][11:16])}</span>
         </div>""",
         unsafe_allow_html=True,
     )
-    st.markdown(daily_html(detail, unit), unsafe_allow_html=True)
+    st.markdown(daily_html(detail, unit, lang), unsafe_allow_html=True)
 
     tab_hourly, tab_map, tab_sun = st.tabs(
-        ["📈 Next 24 hours", "🗺️ Weather map", "🌅 Sun & air"]
+        [t("tab_hourly", lang), t("tab_map", lang), t("tab_sun", lang)]
     )
 
     with tab_hourly:
         st.markdown(
-            """
+            f"""
             <div class="section-head">
               <div>
-                <h2>Rolling 24-hour forecast</h2>
-                <p>Temperature and rain probability. Shaded bands mark night-time.</p>
+                <h2>{t('hourly_title', lang)}</h2>
+                <p>{t('hourly_sub', lang)}</p>
               </div>
             </div>""",
             unsafe_allow_html=True,
         )
         st.plotly_chart(
-            hourly_chart(detail, unit),
+            hourly_chart(detail, unit, lang),
             width="stretch",
             theme=None,
             config=PLOT_CONFIG,
         )
-        st.caption(
-            "Hover the chart for feels-like temperature, humidity, wind and rainfall. "
-            "The teal dot marks the current hour."
-        )
+        st.caption(t("hourly_caption", lang))
 
     with tab_map:
         st.markdown(
             f"""
             <div class="section-head">
               <div>
-                <h2>{city.name_en} on the map</h2>
-                <p>The gold star marks {city.name_zh}; every city is coloured by current temperature.</p>
+                <h2>{t('map_tab_title', lang, city=city_name)}</h2>
+                <p>{t('map_tab_sub', lang, city=city_name)}</p>
               </div>
             </div>""",
             unsafe_allow_html=True,
         )
-        render_map_section(CITIES, overview, unit, city.slug)
+        render_map_section(CITIES, overview, unit, city.slug, lang)
 
     with tab_sun:
         st.markdown(
-            """
+            f"""
             <div class="section-head">
               <div>
-                <h2>Sunlight and air</h2>
-                <p>Today's daylight window plus the latest air-quality reading.</p>
+                <h2>{t('sun_tab_title', lang)}</h2>
+                <p>{t('sun_tab_sub', lang)}</p>
               </div>
             </div>""",
             unsafe_allow_html=True,
         )
-        st.markdown(sun_air_html(detail, unit), unsafe_allow_html=True)
-        st.caption("Air quality is fetched separately and may lag the weather forecast by up to an hour.")
+        st.markdown(sun_air_html(detail, unit, lang), unsafe_allow_html=True)
+        st.caption(t("sun_tab_caption", lang))
 
     st.markdown(
-        footer_html("demo" if error else "live", detail["time"][11:16] or now.strftime("%H:%M")),
+        footer_html(
+            "demo" if error else "live",
+            detail["time"][11:16] or now.strftime("%H:%M"),
+            lang,
+        ),
         unsafe_allow_html=True,
     )
 
@@ -411,21 +444,24 @@ def main() -> None:
         initial_sidebar_state="expanded",
     )
     st.markdown(CSS, unsafe_allow_html=True)
+    lang = current_language()
 
     # The overview powers both the sidebar status and the city map.
     overview, overview_error = load_overview(tuple(city.slug for city in CITIES))
-    unit, query, regions = render_sidebar(overview, overview_error, "°C")
+    unit, query, regions = render_sidebar(overview, overview_error, "°C", lang)
 
     selected = selected_city_from_query()
     if selected:
-        render_detail(selected, overview, unit)
+        render_detail(selected, overview, unit, lang)
     else:
         visible = filtered_cities(query, regions)
         if not query and (not regions or set(regions) == set(REGIONS)):
-            render_overview(overview, overview_error, unit)
+            render_overview(overview, overview_error, unit, lang)
         else:
             # Reuse the overview layout with the current filter applied.
-            render_filtered_overview(overview, overview_error, unit, visible, query, regions)
+            render_filtered_overview(
+                overview, overview_error, unit, visible, query, regions, lang
+            )
 
 
 def render_filtered_overview(
@@ -435,34 +471,38 @@ def render_filtered_overview(
     visible: list[City],
     query: str,
     regions: list[str],
+    lang: str,
 ) -> None:
     now = now_china()
-    st.markdown(hero_html(now, error is None, len(CITIES)), unsafe_allow_html=True)
-    source_alert(error)
-    st.markdown(stats_html(overview, CITY_BY_SLUG, unit), unsafe_allow_html=True)
+    st.markdown(hero_html(now, error is None, len(CITIES), lang), unsafe_allow_html=True)
+    source_alert(error, lang)
+    st.markdown(stats_html(overview, CITY_BY_SLUG, unit, lang), unsafe_allow_html=True)
 
     filter_note = []
     if query:
-        filter_note.append(f"search “{query}”")
+        filter_note.append(t("filter_search_note", lang, query=html.escape(query)))
     if regions and set(regions) != set(REGIONS):
-        filter_note.append(f"{len(regions)} region(s)")
-    note = " · ".join(filter_note) if filter_note else "all cities"
+        filter_note.append(t("filter_regions_note", lang, count=len(regions)))
+    note = " · ".join(filter_note) if filter_note else t("filter_all_note", lang)
 
     st.markdown(
         f"""
         <div class="section-head">
           <div>
-            <h2>Cities · 城市</h2>
-            <p>Showing {len(visible)} of {len(CITIES)} cities · {note}. Click a card for details.</p>
+            <h2>{t('cities_title', lang)}</h2>
+            <p>{t('cities_sub', lang, visible=len(visible), total=len(CITIES), note=note)}</p>
           </div>
-          <span class="section-note">{now.strftime('%H:%M')} CST</span>
+          <span class="section-note">{now.strftime('%H:%M')} {t('cst', lang)}</span>
         </div>""",
         unsafe_allow_html=True,
     )
 
     if not visible:
-        st.info("No cities match that search. Try another name or clear the region filter.")
-        st.markdown(footer_html("demo" if error else "live", now.strftime("%H:%M")), unsafe_allow_html=True)
+        st.info(t("no_match", lang))
+        st.markdown(
+            footer_html("demo" if error else "live", now.strftime("%H:%M"), lang),
+            unsafe_allow_html=True,
+        )
         return
 
     st.markdown(city_card_css(overview, visible), unsafe_allow_html=True)
@@ -472,30 +512,34 @@ def render_filtered_overview(
             weather = overview.get(city.slug)
             if not weather:
                 continue
-            label, foot = city_labels(city, weather, unit)
+            label, foot = city_labels(city, weather, unit, lang)
+            city_name = city.name_zh if lang == "zh" else city.name_en
             with columns[index % 4]:
                 if st.button(
                     label,
                     key=f"city_{city.slug}",
                     width="stretch",
-                    help=f"Open the {city.name_en} forecast",
+                    help=t("help_open_city", lang, city=city_name),
                 ):
                     open_city(city.slug)
                 st.markdown(foot, unsafe_allow_html=True)
 
     st.markdown(
-        """
+        f"""
         <div class="section-head">
           <div>
-            <h2>Weather map · 天气地图</h2>
-            <p>Marker colour shows current temperature across the country.</p>
+            <h2>{t('map_title', lang)}</h2>
+            <p>{t('map_sub_filtered', lang)}</p>
           </div>
         </div>""",
         unsafe_allow_html=True,
     )
-    render_map_section(visible, overview, unit)
+    render_map_section(visible, overview, unit, lang=lang)
     updated = next(iter(overview.values()), {}).get("time", "")[11:16]
-    st.markdown(footer_html("demo" if error else "live", updated or now.strftime("%H:%M")), unsafe_allow_html=True)
+    st.markdown(
+        footer_html("demo" if error else "live", updated or now.strftime("%H:%M"), lang),
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":

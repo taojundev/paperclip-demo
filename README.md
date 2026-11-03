@@ -15,7 +15,8 @@ Harbin's frost to Sanya's tropical breeze. Click any city card to open its full 
 - **Interactive China map** (Plotly) coloured by current temperature, paired with a
   warmest/coldest temperature ladder.
 - **Smart filters** — search in English or Chinese, filter by region, switch between °C
-  and °F, and hit "Surprise me" for a random city.
+  and °F, toggle the whole interface between **English and 中文**, and hit "Surprise me"
+  for a random city.
 - **Deep links** — every city has a URL such as `/?city=shanghai`; the back button
   restores the grid.
 - **Resilient by design** — live Open-Meteo data is cached for 10 minutes and the app
@@ -48,6 +49,7 @@ weather_dashboard/
   api.py                     Open-Meteo fetching, normalisation, demo fallback
   components.py              HTML fragments and Plotly charts
   styles.py                  Global CSS (dark theme, cards, responsive rules)
+  i18n.py                    English/Chinese copy, date and region labels
 static/emoji.woff2           Subset of Noto Color Emoji used by the UI
 .streamlit/config.toml       Dark theme + static file serving
 tests/                       Offline unit tests + headless AppTest smoke tests
@@ -70,8 +72,8 @@ python -m pytest
 
 The suite covers data normalisation, the offline fallback, HTML fragment regressions
 (blank lines would break Streamlit's markdown HTML blocks) and drives the app headlessly
-with `streamlit.testing.v1.AppTest`: overview, search/filter, unit switch, city
-navigation and back.
+with `streamlit.testing.v1.AppTest`: overview, search/filter, unit switch, language
+toggle, city navigation and back.
 
 ## Notes
 
