@@ -1,0 +1,16 @@
+[theme]
+base = "dark"
+primaryColor = "#7c9bff"
+backgroundColor = "#060912"
+secondaryBackgroundColor = "#0f1730"
+textColor = "#eef2ff"
+font = "sans serif"
+
+[server]
+headless = true
+runOnSave = true
+# Serves ./static at /app/static — used for the bundled emoji font.
+enableStaticServing = true
+
+[browser]
+gatherUsageStats = false
