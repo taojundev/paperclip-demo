@@ -15,15 +15,15 @@ Harbin's frost to Sanya's tropical breeze. Click any city card to open its full 
 - **Interactive China map** (Plotly) coloured by current temperature, paired with a
   warmest/coldest temperature ladder.
 - **Smart filters** — search in English or Chinese, filter by region, switch between °C
-  and °F, toggle the whole interface between **English and 中文**, and hit "Surprise me"
-  for a random city.
+  and °F, toggle the whole interface between **English and 中文**, switch between
+  **light and dark themes**, and hit "Surprise me" for a random city.
 - **Deep links** — every city has a URL such as `/?city=shanghai`; the back button
   restores the grid.
 - **Resilient by design** — live Open-Meteo data is cached for 10 minutes and the app
   falls back to a deterministic, realistic demo forecast if the network is unavailable.
-- **Beautiful dark UI** — glassy cards, temperature-tinted gradients, condition-aware
-  icons, responsive layout, bilingual labels and a bundled emoji font so icons render
-  even on machines without a system emoji font.
+- **Beautiful glassy UI** — polished dark and light themes, temperature-tinted
+  gradients, condition-aware icons, responsive layout, bilingual labels and a bundled
+  emoji font so icons render even on machines without a system emoji font.
 
 | Detail page | Map & ladder |
 | --- | --- |
@@ -47,8 +47,8 @@ app.py                       Streamlit entry point and page routing
 weather_dashboard/
   cities.py                  City catalogue + WMO weather-code metadata
   api.py                     Open-Meteo fetching, normalisation, demo fallback
-  components.py              HTML fragments and Plotly charts
-  styles.py                  Global CSS (dark theme, cards, responsive rules)
+  components.py              HTML fragments and theme-aware Plotly charts
+  styles.py                  Global CSS (dark base + light theme, cards, responsive rules)
   i18n.py                    English/Chinese copy, date and region labels
 static/emoji.woff2           Subset of Noto Color Emoji used by the UI
 .streamlit/config.toml       Dark theme + static file serving
@@ -71,9 +71,9 @@ python -m pytest
 ```
 
 The suite covers data normalisation, the offline fallback, HTML fragment regressions
-(blank lines would break Streamlit's markdown HTML blocks) and drives the app headlessly
-with `streamlit.testing.v1.AppTest`: overview, search/filter, unit switch, language
-toggle, city navigation and back.
+(blank lines would break Streamlit's markdown HTML blocks), theme palettes and drives
+the app headlessly with `streamlit.testing.v1.AppTest`: overview, search/filter, unit
+switch, language and theme toggles, city navigation and back.
 
 ## Notes
 

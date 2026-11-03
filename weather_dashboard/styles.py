@@ -1,6 +1,9 @@
-"""Global CSS for the dark, glassy weather dashboard."""
+"""Global CSS for the glassy weather dashboard (dark and light themes)."""
 
 from __future__ import annotations
+
+THEMES = ("dark", "light")
+DEFAULT_THEME = "dark"
 
 CSS = r"""
 <style>
@@ -733,8 +736,10 @@ h1, h2, h3, h4, h5, h6,
     white-space: normal;
 }
 
-/* Language toggle sits above the brand and is always one click away. */
+/* Theme + language toggles sit above the brand, always one click away. */
+.st-key-theme_toggle { margin-bottom: 7px; }
 .st-key-lang_toggle { margin-bottom: 12px; }
+.st-key-theme_toggle button,
 .st-key-lang_toggle button {
     background: linear-gradient(120deg, rgba(124, 155, 255, 0.26), rgba(110, 231, 216, 0.16)) !important;
     border: 1px solid rgba(148, 163, 255, 0.36) !important;
@@ -742,6 +747,7 @@ h1, h2, h3, h4, h5, h6,
     font-weight: 700 !important;
     letter-spacing: 0.04em;
 }
+.st-key-theme_toggle button:hover,
 .st-key-lang_toggle button:hover {
     border-color: rgba(110, 231, 216, 0.62) !important;
     box-shadow: 0 8px 22px rgba(60, 80, 220, 0.28);
@@ -810,3 +816,308 @@ h1, h2, h3, h4, h5, h6,
 }
 </style>
 """
+
+
+# The light theme is layered on top of the dark stylesheet: it retunes the
+# design tokens and repaints the few surfaces that use literal dark colours.
+LIGHT_CSS = r"""<style>
+:root {
+    --bg: #f6f8ff;
+    --bg-2: #eef3fd;
+    --panel: rgba(255, 255, 255, 0.86);
+    --panel-strong: rgba(255, 255, 255, 0.96);
+    --stroke: rgba(59, 78, 140, 0.14);
+    --stroke-strong: rgba(59, 78, 140, 0.28);
+    --text: #17203a;
+    --muted: #5c6a91;
+    --faint: #7885a8;
+    --accent: #4f6bed;
+    --accent-2: #0f9c8f;
+    --warm: #c2740b;
+    --danger: #d23b53;
+    --shadow: 0 22px 60px rgba(40, 58, 120, 0.13);
+
+    /* Streamlit's own widgets inherit these. */
+    --background-color: #f6f8ff;
+    --secondary-background-color: #ffffff;
+    --text-color: #17203a;
+    --primary-color: #4f6bed;
+}
+
+.stApp {
+    background:
+        radial-gradient(1100px 680px at 8% -8%, rgba(79, 107, 237, 0.13), transparent 62%),
+        radial-gradient(900px 620px at 100% 0%, rgba(15, 156, 143, 0.11), transparent 60%),
+        radial-gradient(900px 700px at 50% 110%, rgba(79, 107, 237, 0.09), transparent 62%),
+        linear-gradient(180deg, #fbfcff 0%, #f2f6fe 46%, #edf2fb 100%);
+    color: var(--text);
+}
+.stApp::before {
+    background-image:
+        linear-gradient(rgba(59, 78, 140, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 78, 140, 0.045) 1px, transparent 1px);
+}
+
+/* ------------------------------------------------------------- typography */
+.hero-kicker { color: #3f5bd6; }
+.hero h1 .grad {
+    background: linear-gradient(94deg, #101a35 4%, #2f4ed0 52%, #0f8f84 94%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.hero-sub { color: #52618a; }
+.pill {
+    border-color: rgba(59, 78, 140, 0.16);
+    background: rgba(255, 255, 255, 0.72);
+    color: #44527a;
+}
+.pill strong { color: #17203a; }
+.section-note { color: var(--faint); }
+.city-foot { color: var(--faint); }
+.city-foot span:last-child { color: #5a6890; }
+
+/* ------------------------------------------------------------------ hero */
+.hero {
+    background:
+        radial-gradient(620px 300px at 92% -10%, rgba(15, 156, 143, 0.13), transparent 60%),
+        radial-gradient(700px 360px at 0% 120%, rgba(79, 107, 237, 0.12), transparent 62%),
+        linear-gradient(122deg, rgba(255, 255, 255, 0.96), rgba(240, 245, 255, 0.9));
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.hero::after { background: radial-gradient(circle, rgba(15, 156, 143, 0.18), transparent 68%); }
+
+/* ----------------------------------------------------------- cards / stats */
+.stat {
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(242, 246, 255, 0.9));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 28px rgba(40, 58, 120, 0.06);
+}
+.stat-icon {
+    background: rgba(79, 107, 237, 0.10);
+    border-color: rgba(79, 107, 237, 0.18);
+}
+.stButton > button {
+    background: linear-gradient(152deg, rgba(255, 255, 255, 0.98), rgba(243, 247, 255, 0.95));
+    border-color: rgba(59, 78, 140, 0.16);
+    color: #17203a;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px rgba(40, 58, 120, 0.05);
+}
+.stButton > button:hover {
+    border-color: rgba(79, 107, 237, 0.45);
+    box-shadow: 0 16px 34px rgba(40, 58, 120, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    color: #101a35;
+}
+.stButton > button:focus:not(:active) {
+    border-color: rgba(15, 156, 143, 0.6);
+    box-shadow: 0 0 0 3px rgba(15, 156, 143, 0.14);
+    color: #101a35;
+}
+
+/* ---------------------------------------------------------------- detail */
+.detail-hero {
+    background:
+        radial-gradient(560px 300px at 88% -20%, var(--glow, rgba(79, 107, 237, 0.18)), transparent 64%),
+        radial-gradient(620px 320px at 0% 130%, rgba(15, 156, 143, 0.10), transparent 66%),
+        linear-gradient(124deg, rgba(255, 255, 255, 0.97), rgba(240, 245, 255, 0.92));
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.crumb { color: #6070a0; }
+.detail-hero h1 span { color: #5a6890; }
+.detail-cond { color: #44527a; }
+.detail-cond .zh { color: #17203a; }
+.chip {
+    border-color: rgba(59, 78, 140, 0.16);
+    background: rgba(255, 255, 255, 0.8);
+    color: #44527a;
+}
+.chip b { color: #17203a; }
+.now-emoji { filter: drop-shadow(0 10px 20px rgba(40, 58, 120, 0.18)); }
+.temp-now {
+    background: linear-gradient(180deg, #17203a 20%, #4257a8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.temp-now sup { color: #3f5bd6; -webkit-text-fill-color: #3f5bd6; }
+
+/* ---------------------------------------------------------------- alerts */
+.alert {
+    color: #7a5a12;
+    --alert-border: rgba(194, 116, 11, 0.26);
+    --alert-bg: rgba(251, 191, 36, 0.12);
+}
+.alert b { color: #17203a; }
+.alert.danger {
+    --alert-border: rgba(210, 59, 83, 0.28);
+    --alert-bg: rgba(210, 59, 83, 0.08);
+    color: #a1263b;
+}
+.alert.info {
+    --alert-border: rgba(79, 107, 237, 0.26);
+    --alert-bg: rgba(79, 107, 237, 0.08);
+    color: #2e45a0;
+}
+
+/* --------------------------------------------------------------- metrics */
+.metric {
+    background: linear-gradient(152deg, rgba(255, 255, 255, 0.96), rgba(242, 246, 255, 0.92));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 22px rgba(40, 58, 120, 0.05);
+}
+.m-bar, .day-range, .p-bar, .ladder-bar { background: rgba(59, 78, 140, 0.12); }
+
+/* ---------------------------------------------------------------- daily */
+.day-card {
+    background: linear-gradient(170deg, rgba(255, 255, 255, 0.97), rgba(242, 246, 255, 0.94));
+}
+.day-card:hover { border-color: var(--stroke-strong); }
+.day-card.today {
+    border-color: rgba(15, 156, 143, 0.35);
+    background:
+        radial-gradient(160px 90px at 50% 0%, rgba(15, 156, 143, 0.12), transparent 70%),
+        linear-gradient(170deg, rgba(255, 255, 255, 0.98), rgba(238, 247, 249, 0.95));
+}
+.day-icon { filter: drop-shadow(0 4px 8px rgba(40, 58, 120, 0.16)); }
+.day-rain { color: #2f7fd1; }
+
+/* ----------------------------------------------------------------- tabs */
+.stTabs [data-baseweb="tab-list"],
+.stTabs [role="tablist"] {
+    border-color: var(--stroke);
+    background: rgba(255, 255, 255, 0.82);
+}
+.stTabs [data-baseweb="tab"],
+.stTabs [role="tab"] { color: #5c6a91; }
+.stTabs [data-baseweb="tab"]:hover,
+.stTabs [role="tab"]:hover { color: #17203a; background: rgba(79, 107, 237, 0.06); }
+.stTabs [aria-selected="true"] {
+    color: #17203a !important;
+    background: linear-gradient(135deg, rgba(79, 107, 237, 0.16), rgba(15, 156, 143, 0.10));
+}
+
+/* ------------------------------------------------------------ sun / air */
+.info-card, .map-side {
+    background: linear-gradient(152deg, rgba(255, 255, 255, 0.96), rgba(241, 246, 255, 0.92));
+}
+.pollutant .p-row b { color: #2b3552; }
+.ladder-label.cold { border-top-color: rgba(59, 78, 140, 0.10); }
+
+/* --------------------------------------------------------------- footer */
+.app-footer { border-top-color: rgba(59, 78, 140, 0.12); }
+.app-footer b { color: #44527a; }
+
+/* -------------------------------------------------------------- sidebar */
+[data-testid="stSidebar"] {
+    background:
+        radial-gradient(420px 300px at 50% -8%, rgba(79, 107, 237, 0.12), transparent 62%),
+        linear-gradient(180deg, #fbfcff 0%, #f1f5fd 100%);
+    border-right: 1px solid rgba(59, 78, 140, 0.12);
+}
+.side-logo {
+    background: linear-gradient(145deg, rgba(79, 107, 237, 0.18), rgba(15, 156, 143, 0.12));
+    border-color: rgba(79, 107, 237, 0.24);
+    box-shadow: 0 8px 22px rgba(79, 107, 237, 0.16);
+}
+.side-status {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: var(--stroke);
+}
+.side-status .row b { color: #2b3552; }
+.side-status .live { color: #0f8f74; }
+.side-status .demo { color: #b57500; }
+.side-foot a { color: #3f5bd6; }
+.st-key-theme_toggle button,
+.st-key-lang_toggle button {
+    background: linear-gradient(120deg, rgba(79, 107, 237, 0.16), rgba(15, 156, 143, 0.12)) !important;
+    border: 1px solid rgba(79, 107, 237, 0.30) !important;
+    color: #26345c !important;
+}
+.st-key-theme_toggle button:hover,
+.st-key-lang_toggle button:hover {
+    border-color: rgba(15, 156, 143, 0.55) !important;
+    box-shadow: 0 8px 20px rgba(79, 107, 237, 0.16);
+}
+[data-testid="stSidebar"] .stTextInput input,
+[data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] > div {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(59, 78, 140, 0.18);
+    color: var(--text);
+}
+[data-testid="stSidebar"] [data-testid="stTextInputRootElement"] {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border-color: rgba(59, 78, 140, 0.18) !important;
+}
+[data-testid="stSidebar"] [data-testid="stTextInputRootElement"]:focus-within {
+    border-color: rgba(79, 107, 237, 0.55) !important;
+    box-shadow: 0 0 0 2px rgba(79, 107, 237, 0.12) !important;
+}
+[data-testid="stSidebar"] .stTextInput input::placeholder { color: #8792b0; }
+[data-testid="stSidebar"] .stTextInput input:focus {
+    border-color: rgba(79, 107, 237, 0.55) !important;
+    box-shadow: 0 0 0 2px rgba(79, 107, 237, 0.12) !important;
+    outline: none !important;
+}
+.detail-hero h1 { color: var(--text); }
+[data-testid="stSidebar"] label p { color: #44527a; }
+[data-testid="stSidebar"] [data-baseweb="tag"] {
+    background: rgba(79, 107, 237, 0.12) !important;
+}
+[data-testid="stSidebar"] [data-baseweb="tag"] span { color: #26345c !important; }
+
+/* ------------------------------------------------------ Streamlit widgets */
+[data-testid="stMarkdownContainer"],
+[data-testid="stWidgetLabel"],
+[data-testid="stCaptionContainer"],
+[data-testid="stSidebar"] { color: var(--text); }
+.side-title { color: #17203a; }
+[data-testid="stMultiSelect"] [role="group"] {
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(59, 78, 140, 0.18);
+    border-radius: 11px;
+}
+[data-testid="stMultiSelect"] input { color: var(--text); }
+[data-testid="stMultiSelect"] input::placeholder { color: #8792b0; opacity: 1; }
+[data-testid="stMultiSelect"] button { color: #44527a; }
+[data-testid="stExpander"] {
+    background: rgba(255, 255, 255, 0.78);
+    border-color: var(--stroke);
+}
+[data-testid="stExpander"] summary { color: #44527a; }
+[data-testid="stPlotlyChart"] {
+    background: linear-gradient(152deg, rgba(255, 255, 255, 0.94), rgba(241, 246, 255, 0.9));
+    border-color: var(--stroke);
+}
+[data-testid="stAlert"] { border-radius: 13px; }
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] li { color: #26345c; }
+button[data-variant="segmented_control"],
+[data-testid="stSegmentedControl"] button,
+[data-baseweb="button-group"] button {
+    color: #44527a !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    border-color: rgba(59, 78, 140, 0.16) !important;
+}
+button[data-variant="segmented_control"]:hover,
+[data-testid="stSegmentedControl"] button:hover,
+[data-baseweb="button-group"] button:hover { background: rgba(79, 107, 237, 0.08) !important; }
+button[data-variant="segmented_control"][aria-checked="true"],
+[data-testid="stSegmentedControl"] button[aria-checked="true"],
+[data-testid="stSegmentedControl"] button[aria-selected="true"] {
+    color: #ffffff !important;
+    background: #4f6bed !important;
+    border-color: #4f6bed !important;
+}
+[data-baseweb="popover"], [data-baseweb="menu"], [role="listbox"] {
+    background: #ffffff !important;
+    color: #17203a !important;
+    border-color: rgba(59, 78, 140, 0.16) !important;
+}
+[data-baseweb="popover"] li:hover, [role="option"]:hover { background: rgba(79, 107, 237, 0.08) !important; }
+[data-testid="stCaptionContainer"] p { color: var(--faint); }
+</style>
+"""
+
+
+def theme_css(theme: str = DEFAULT_THEME) -> str:
+    """Return the stylesheet for ``theme`` (dark is the base, light extends it)."""
+
+    return CSS + (LIGHT_CSS if theme == "light" else "")

@@ -11,6 +11,7 @@ from weather_dashboard import CITIES, demo_detail, demo_overview
 from weather_dashboard.api import _normalise_overview
 from weather_dashboard.cities import weather_code_info
 from weather_dashboard.components import (
+    city_card_css,
     convert_temp,
     daily_html,
     detail_hero_html,
@@ -116,6 +117,31 @@ def test_charts_render() -> None:
     detail = demo_detail(BY_SLUG["beijing"], NOW)
     assert len(map_chart(CITIES, overview, "beijing", "°C").data) == 2
     assert len(hourly_chart(detail, "°F").data) >= 4
+
+    light_map = map_chart(CITIES, overview, "beijing", "°C", theme="light")
+    light_hourly = hourly_chart(detail, "°C", theme="light")
+    assert light_map.layout.geo.landcolor == "#e8eef9"
+    assert light_map.layout.geo.oceancolor == "#dbe8f7"
+    assert light_hourly.layout.font.color == "#44527a"
+    assert light_hourly.layout.hoverlabel.bgcolor == "#ffffff"
+
+    light_cards = city_card_css(overview, CITIES, "light")
+    assert ".st-key-city_beijing button" in light_cards
+    assert "rgba(255, 255, 255, 0.97)" in light_cards
+    assert "rgba(11, 16, 35, 0.9)" not in light_cards
+
+
+def test_theme_css_contains_both_palettes() -> None:
+    from weather_dashboard.styles import DEFAULT_THEME, THEMES, theme_css
+
+    assert DEFAULT_THEME == "dark"
+    assert THEMES == ("dark", "light")
+    dark = theme_css("dark")
+    light = theme_css("light")
+    assert light.startswith(dark)
+    assert "--bg: #060912" in dark
+    assert "--bg: #f6f8ff" in light
+    assert "--bg: #f6f8ff" not in dark
 
 
 def test_language_dictionaries_cover_same_keys() -> None:

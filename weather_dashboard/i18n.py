@@ -78,6 +78,10 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "language_label": "Language",
         "language_button": "🌐 中文",
+        "theme_label": "Theme",
+        "theme_button_light": "☀️ Light mode",
+        "theme_button_dark": "🌙 Dark mode",
+        "theme_help": "Switch between light and dark themes",
         "temperature_unit": "Temperature unit",
         "search_cities": "Search cities",
         "search_placeholder": "Beijing, 上海, Chengdu…",
@@ -101,7 +105,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "about_body": (
             "**35 major cities**, one dashboard.\n\n"
             "- Click any city card to open its detailed forecast\n"
-            "- Temperature units and language can be switched here at any time\n"
+            "- Temperature units, language and light/dark theme can be switched here at any time\n"
             "- Data refreshes every 10 minutes, with an offline demo fallback\n"
             "- Air quality comes from the Open-Meteo Air Quality API"
         ),
@@ -296,6 +300,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "side_copy": "覆盖全国主要城市的实时天气与预报，从东北边陲到热带南国。",
         "language_label": "语言",
         "language_button": "🌐 English",
+        "theme_label": "主题",
+        "theme_button_light": "☀️ 浅色模式",
+        "theme_button_dark": "🌙 深色模式",
+        "theme_help": "在浅色与深色主题之间切换",
         "temperature_unit": "温度单位",
         "search_cities": "搜索城市",
         "search_placeholder": "北京、上海、成都…",
@@ -319,7 +327,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "about_body": (
             "**35 座主要城市**，一个看板。\n\n"
             "- 点击任意城市卡片查看详细预报\n"
-            "- 可随时切换温度单位与界面语言\n"
+            "- 可随时切换温度单位、界面语言与浅色/深色主题\n"
             "- 数据每 10 分钟刷新，离线时提供演示数据\n"
             "- 空气质量来自 Open-Meteo 空气质量 API"
         ),

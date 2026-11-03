@@ -27,8 +27,34 @@ def test_overview_renders_in_english_by_default() -> None:
     app = _run()
     assert any("Beijing" in button.label for button in app.button)
     assert any("🌐 中文" in button.label for button in app.button)
+    assert any("☀️ Light mode" in button.label for button in app.button)
+    assert app.session_state["theme"] == "dark"
     assert app.markdown, "expected custom HTML sections"
     assert "Weather across" in " ".join(section.value for section in app.markdown)
+
+
+def test_theme_toggle_switches_light_and_dark() -> None:
+    app = _run()
+    assert app.session_state["theme"] == "dark"
+
+    next(button for button in app.button if "Light mode" in button.label).click().run()
+    assert not app.exception, [e.value for e in app.exception]
+    assert app.session_state["theme"] == "light"
+    assert any("Dark mode" in button.label for button in app.button)
+    assert not any("Light mode" in button.label for button in app.button)
+    assert "--bg: #f6f8ff" in " ".join(section.value for section in app.markdown)
+
+    # The light theme survives navigation and can be switched back.
+    next(button for button in app.button if "Beijing" in button.label).click().run()
+    assert not app.exception
+    assert app.session_state["theme"] == "light"
+    assert "--bg: #f6f8ff" in " ".join(section.value for section in app.markdown)
+
+    next(button for button in app.button if "Dark mode" in button.label).click().run()
+    assert not app.exception
+    assert app.session_state["theme"] == "dark"
+    assert any("Light mode" in button.label for button in app.button)
+    assert "--bg: #f6f8ff" not in " ".join(section.value for section in app.markdown)
 
 
 def test_chinese_toggle_switches_interface() -> None:

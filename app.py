@@ -37,7 +37,7 @@ from weather_dashboard.components import (
     sun_air_html,
 )
 from weather_dashboard.i18n import DEFAULT_LANGUAGE, region_label, t
-from weather_dashboard.styles import CSS
+from weather_dashboard.styles import DEFAULT_THEME, theme_css
 
 TIMEZONE = ZoneInfo("Asia/Shanghai")
 PLOT_CONFIG = {
@@ -87,6 +87,16 @@ def current_language() -> str:
     return st.session_state["language"]
 
 
+def current_theme() -> str:
+    """Return the active UI theme, initialising dark on first load."""
+
+    theme = st.session_state.get("theme", DEFAULT_THEME)
+    if theme not in ("dark", "light"):
+        theme = DEFAULT_THEME
+    st.session_state["theme"] = theme
+    return theme
+
+
 def selected_city_from_query() -> City | None:
     raw = st.query_params.get("city")
     if isinstance(raw, (list, tuple)):
@@ -128,13 +138,14 @@ def render_map_section(
     unit: str,
     selected_slug: str = "",
     lang: str = DEFAULT_LANGUAGE,
+    theme: str = DEFAULT_THEME,
 ) -> None:
     """Show the weather map beside the warmest/coldest ladder."""
 
     map_column, side_column = st.columns([2.15, 1], gap="medium")
     with map_column:
         st.plotly_chart(
-            map_chart(cities, overview, selected_slug, unit, lang),
+            map_chart(cities, overview, selected_slug, unit, lang, theme),
             width="stretch",
             theme=None,
             config=PLOT_CONFIG,
@@ -171,10 +182,25 @@ def render_sidebar(
     error: str | None,
     unit: str,
     lang: str,
+    theme: str,
 ) -> tuple[str, str, list[str]]:
     with st.sidebar:
         st.markdown(
-            f'<div class="side-label" style="margin-top:0">{t("language_label", lang)}</div>',
+            f'<div class="side-label" style="margin-top:0">{t("theme_label", lang)}</div>',
+            unsafe_allow_html=True,
+        )
+        next_theme = "light" if theme == "dark" else "dark"
+        if st.button(
+            t(f"theme_button_{next_theme}", lang),
+            key="theme_toggle",
+            width="stretch",
+            help=t("theme_help", lang),
+        ):
+            st.session_state["theme"] = next_theme
+            st.rerun()
+
+        st.markdown(
+            f'<div class="side-label">{t("language_label", lang)}</div>',
             unsafe_allow_html=True,
         )
         if st.button(
@@ -277,6 +303,7 @@ def render_overview(
     error: str | None,
     unit: str,
     lang: str,
+    theme: str = DEFAULT_THEME,
 ) -> None:
     now = now_china()
     st.markdown(hero_html(now, error is None, len(CITIES), lang), unsafe_allow_html=True)
@@ -293,7 +320,7 @@ def render_overview(
     </div>"""
     st.markdown(section, unsafe_allow_html=True)
 
-    st.markdown(city_card_css(overview, CITIES), unsafe_allow_html=True)
+    st.markdown(city_card_css(overview, CITIES, theme), unsafe_allow_html=True)
     st.markdown(
         """
         <style>
@@ -331,7 +358,7 @@ def render_overview(
         </div>""",
         unsafe_allow_html=True,
     )
-    render_map_section(CITIES, overview, unit, lang=lang)
+    render_map_section(CITIES, overview, unit, lang=lang, theme=theme)
     updated = next(iter(overview.values()), {}).get("time", "")[11:16]
     st.markdown(
         footer_html("demo" if error else "live", updated or now.strftime("%H:%M"), lang),
@@ -344,7 +371,13 @@ def render_overview(
 # ---------------------------------------------------------------------------
 
 
-def render_detail(city: City, overview: dict[str, dict], unit: str, lang: str) -> None:
+def render_detail(
+    city: City,
+    overview: dict[str, dict],
+    unit: str,
+    lang: str,
+    theme: str = DEFAULT_THEME,
+) -> None:
     detail, error = load_detail(city.slug)
     now = now_china()
     city_name = city.name_zh if lang == "zh" else city.name_en
@@ -387,7 +420,7 @@ def render_detail(city: City, overview: dict[str, dict], unit: str, lang: str) -
             unsafe_allow_html=True,
         )
         st.plotly_chart(
-            hourly_chart(detail, unit, lang),
+            hourly_chart(detail, unit, lang, theme),
             width="stretch",
             theme=None,
             config=PLOT_CONFIG,
@@ -405,7 +438,7 @@ def render_detail(city: City, overview: dict[str, dict], unit: str, lang: str) -
             </div>""",
             unsafe_allow_html=True,
         )
-        render_map_section(CITIES, overview, unit, city.slug, lang)
+        render_map_section(CITIES, overview, unit, city.slug, lang, theme)
 
     with tab_sun:
         st.markdown(
@@ -443,24 +476,25 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="expanded",
     )
-    st.markdown(CSS, unsafe_allow_html=True)
+    theme = current_theme()
+    st.markdown(theme_css(theme), unsafe_allow_html=True)
     lang = current_language()
 
     # The overview powers both the sidebar status and the city map.
     overview, overview_error = load_overview(tuple(city.slug for city in CITIES))
-    unit, query, regions = render_sidebar(overview, overview_error, "°C", lang)
+    unit, query, regions = render_sidebar(overview, overview_error, "°C", lang, theme)
 
     selected = selected_city_from_query()
     if selected:
-        render_detail(selected, overview, unit, lang)
+        render_detail(selected, overview, unit, lang, theme)
     else:
         visible = filtered_cities(query, regions)
         if not query and (not regions or set(regions) == set(REGIONS)):
-            render_overview(overview, overview_error, unit, lang)
+            render_overview(overview, overview_error, unit, lang, theme)
         else:
             # Reuse the overview layout with the current filter applied.
             render_filtered_overview(
-                overview, overview_error, unit, visible, query, regions, lang
+                overview, overview_error, unit, visible, query, regions, lang, theme
             )
 
 
@@ -472,6 +506,7 @@ def render_filtered_overview(
     query: str,
     regions: list[str],
     lang: str,
+    theme: str = DEFAULT_THEME,
 ) -> None:
     now = now_china()
     st.markdown(hero_html(now, error is None, len(CITIES), lang), unsafe_allow_html=True)
@@ -505,7 +540,7 @@ def render_filtered_overview(
         )
         return
 
-    st.markdown(city_card_css(overview, visible), unsafe_allow_html=True)
+    st.markdown(city_card_css(overview, visible, theme), unsafe_allow_html=True)
     with st.container(key="city_grid"):
         columns = st.columns(4, gap="small")
         for index, city in enumerate(visible):
@@ -534,7 +569,7 @@ def render_filtered_overview(
         </div>""",
         unsafe_allow_html=True,
     )
-    render_map_section(visible, overview, unit, lang=lang)
+    render_map_section(visible, overview, unit, lang=lang, theme=theme)
     updated = next(iter(overview.values()), {}).get("time", "")[11:16]
     st.markdown(
         footer_html("demo" if error else "live", updated or now.strftime("%H:%M"), lang),

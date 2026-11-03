@@ -24,6 +24,66 @@ from .i18n import (
 UNIT_LABEL = {"°C": "°C", "°F": "°F"}
 
 
+# Chart colours for each UI theme. Plotly charts are rendered server-side, so
+# they need an explicit palette rather than inheriting the page CSS.
+_CHART_PALETTES = {
+    "dark": {
+        "text": "#aab5d8",
+        "tick": "#96a2c8",
+        "axis_title": "#6c789e",
+        "grid_y": "rgba(148,163,255,0.09)",
+        "grid_x": "rgba(148,163,255,0.05)",
+        "night": "rgba(8, 12, 30, 0.42)",
+        "rain_bar": "rgba(110, 231, 216, 0.20)",
+        "temp_line": "#8fa8ff",
+        "temp_marker": "#c9d6ff",
+        "temp_fill": "rgba(124, 155, 255, 0.13)",
+        "now_marker": "#6ee7d8",
+        "now_marker_line": "#0a1024",
+        "hover_bg": "#111832",
+        "hover_border": "rgba(148,163,255,0.25)",
+        "hover_text": "#eef2ff",
+        "land": "#141b36",
+        "ocean": "#080d1d",
+        "lake": "#0b1226",
+        "country": "rgba(148,163,255,0.22)",
+        "coastline": "rgba(148,163,255,0.25)",
+        "colorbar": "#96a2c8",
+        "selected_text": "#ffffff",
+        "selected_line": "#ffd06b",
+    },
+    "light": {
+        "text": "#44527a",
+        "tick": "#5c6a91",
+        "axis_title": "#6b789a",
+        "grid_y": "rgba(59,78,140,0.10)",
+        "grid_x": "rgba(59,78,140,0.06)",
+        "night": "rgba(59,78,140,0.07)",
+        "rain_bar": "rgba(15, 156, 143, 0.18)",
+        "temp_line": "#4f6bed",
+        "temp_marker": "#ffffff",
+        "temp_fill": "rgba(79, 107, 237, 0.10)",
+        "now_marker": "#0f9c8f",
+        "now_marker_line": "#ffffff",
+        "hover_bg": "#ffffff",
+        "hover_border": "rgba(59,78,140,0.18)",
+        "hover_text": "#17203a",
+        "land": "#e8eef9",
+        "ocean": "#dbe8f7",
+        "lake": "#d3e3f5",
+        "country": "rgba(59,78,140,0.20)",
+        "coastline": "rgba(59,78,140,0.26)",
+        "colorbar": "#5c6a91",
+        "selected_text": "#17203a",
+        "selected_line": "#e0a200",
+    },
+}
+
+
+def _chart_palette(theme: str = "dark") -> dict[str, str]:
+    return _CHART_PALETTES["light" if theme == "light" else "dark"]
+
+
 # ---------------------------------------------------------------------------
 # Formatting helpers
 # ---------------------------------------------------------------------------
@@ -248,7 +308,11 @@ def extremes_html(
     )
 
 
-def city_card_css(overview: dict[str, dict], cities: Sequence[City]) -> str:
+def city_card_css(
+    overview: dict[str, dict],
+    cities: Sequence[City],
+    theme: str = "dark",
+) -> str:
     """Per-city gradients generated from live temperature and condition."""
 
     palettes = {
@@ -259,6 +323,18 @@ def city_card_css(overview: dict[str, dict], cities: Sequence[City]) -> str:
         "snow": ("rgba(186, 230, 253, 0.20)", "rgba(124, 155, 255, 0.07)", "rgba(186, 230, 253, 0.44)"),
         "fog": ("rgba(148, 163, 184, 0.18)", "rgba(124, 155, 255, 0.06)", "rgba(148, 163, 184, 0.38)"),
     }
+    light = theme == "light"
+    card_bg = (
+        "linear-gradient(152deg, rgba(255, 255, 255, 0.97), rgba(242, 246, 255, 0.94))"
+        if light
+        else "linear-gradient(152deg, rgba(26, 34, 66, 0.94), rgba(11, 16, 35, 0.9))"
+    )
+    card_border = "rgba(59, 78, 140, 0.14)" if light else "rgba(148, 163, 255, 0.18)"
+    hover_shadow = (
+        "0 16px 34px rgba(40, 58, 120, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
+        if light
+        else "0 16px 40px rgba(5, 9, 24, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)"
+    )
     rules = []
     for city in cities:
         weather = overview.get(city.slug)
@@ -271,12 +347,12 @@ def city_card_css(overview: dict[str, dict], cities: Sequence[City]) -> str:
 .st-key-city_{city.slug} button {{
   background:
     radial-gradient(220px 120px at 12% 0%, {top}, transparent 70%),
-    linear-gradient(152deg, rgba(26, 34, 66, 0.94), rgba(11, 16, 35, 0.9));
-  border-color: rgba(148, 163, 255, 0.18);
+    {card_bg};
+  border-color: {card_border};
 }}
 .st-key-city_{city.slug} button:hover {{
   border-color: {border};
-  box-shadow: 0 16px 40px rgba(5, 9, 24, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: {hover_shadow};
 }}"""
         )
     return "<style>" + "".join(rules) + "</style>"
@@ -500,17 +576,18 @@ def daily_html(detail: dict, unit: str, lang: str = "en") -> str:
 # ---------------------------------------------------------------------------
 
 
-def _base_layout(height: int = 370) -> dict:
+def _base_layout(height: int = 370, theme: str = "dark") -> dict:
+    palette = _chart_palette(theme)
     return dict(
         height=height,
         margin=dict(l=12, r=12, t=22, b=10),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, -apple-system, Segoe UI, sans-serif", color="#aab5d8", size=12),
+        font=dict(family="Inter, -apple-system, Segoe UI, sans-serif", color=palette["text"], size=12),
         hoverlabel=dict(
-            bgcolor="#111832",
-            bordercolor="rgba(148,163,255,0.25)",
-            font=dict(color="#eef2ff", size=12),
+            bgcolor=palette["hover_bg"],
+            bordercolor=palette["hover_border"],
+            font=dict(color=palette["hover_text"], size=12),
         ),
         hovermode="x unified",
         showlegend=False,
@@ -521,6 +598,7 @@ def hourly_chart(
     detail: dict,
     unit: str = "°C",
     lang: str = "en",
+    theme: str = "dark",
 ) -> go.Figure:
     hourly = detail["hourly"]
     times = [datetime.fromisoformat(t) for t in hourly["time"]]
@@ -531,6 +609,7 @@ def hourly_chart(
     wind = hourly["wind"]
     precip = hourly["precip"]
     is_day = hourly["is_day"]
+    palette = _chart_palette(theme)
 
     fig = go.Figure()
 
@@ -540,17 +619,17 @@ def hourly_chart(
         if not daylight and night_start is None:
             night_start = index
         if daylight and night_start is not None:
-            fig.add_vrect(x0=times[night_start], x1=times[index], fillcolor="rgba(8, 12, 30, 0.42)", line_width=0, layer="below")
+            fig.add_vrect(x0=times[night_start], x1=times[index], fillcolor=palette["night"], line_width=0, layer="below")
             night_start = None
     if night_start is not None:
-        fig.add_vrect(x0=times[night_start], x1=times[-1], fillcolor="rgba(8, 12, 30, 0.42)", line_width=0, layer="below")
+        fig.add_vrect(x0=times[night_start], x1=times[-1], fillcolor=palette["night"], line_width=0, layer="below")
 
     fig.add_trace(
         go.Bar(
             x=times,
             y=rain,
             name=t("chart_rain_chance", lang),
-            marker=dict(color="rgba(110, 231, 216, 0.20)", line=dict(width=0)),
+            marker=dict(color=palette["rain_bar"], line=dict(width=0)),
             yaxis="y2",
             hovertemplate=f"{t('chart_rain_chance', lang)} %{{y}}%<extra></extra>",
         )
@@ -575,10 +654,10 @@ def hourly_chart(
             y=converted,
             mode="lines+markers",
             name=t("chart_temperature", lang),
-            line=dict(color="#8fa8ff", width=3, shape="spline"),
-            marker=dict(size=4, color="#c9d6ff", line=dict(color="#8fa8ff", width=1)),
+            line=dict(color=palette["temp_line"], width=3, shape="spline"),
+            marker=dict(size=4, color=palette["temp_marker"], line=dict(color=palette["temp_line"], width=1)),
             fill="tonexty",
-            fillcolor="rgba(124, 155, 255, 0.13)",
+            fillcolor=palette["temp_fill"],
             customdata=list(zip(feels_converted, humidity, wind, precip)),
             hovertemplate=(
                 f"<b>%{{x|%H:%M}}</b><br>{t('chart_temperature', lang)} %{{y:.0f}}{unit}<br>"
@@ -595,17 +674,17 @@ def hourly_chart(
             x=[times[0]],
             y=[converted[0]],
             mode="markers",
-            marker=dict(size=12, color="#6ee7d8", line=dict(color="#0a1024", width=3)),
+            marker=dict(size=12, color=palette["now_marker"], line=dict(color=palette["now_marker_line"], width=3)),
             hoverinfo="skip",
             showlegend=False,
         )
     )
 
-    layout = _base_layout(380)
+    layout = _base_layout(380, theme)
     layout.update(
         yaxis=dict(
-            title=dict(text=t("chart_temp_axis", lang, unit=unit), font=dict(size=11, color="#6c789e")),
-            gridcolor="rgba(148,163,255,0.09)",
+            title=dict(text=t("chart_temp_axis", lang, unit=unit), font=dict(size=11, color=palette["axis_title"])),
+            gridcolor=palette["grid_y"],
             zeroline=False,
             tickfont=dict(size=11),
             fixedrange=False,
@@ -621,7 +700,7 @@ def hourly_chart(
             zeroline=False,
         ),
         xaxis=dict(
-            gridcolor="rgba(148,163,255,0.05)",
+            gridcolor=palette["grid_x"],
             tickformat="%H:%M",
             tickfont=dict(size=11),
             showline=False,
@@ -639,7 +718,9 @@ def map_chart(
     selected_slug: str,
     unit: str,
     lang: str = "en",
+    theme: str = "dark",
 ) -> go.Figure:
+    palette = _chart_palette(theme)
     shown = [city for city in cities if city.slug in overview]
     temps = [convert_temp(overview[city.slug]["temp"], unit) for city in shown]
     if not temps:
@@ -669,11 +750,11 @@ def map_chart(
                 cmin=low,
                 cmax=high,
                 colorbar=dict(
-                    title=dict(text=unit, font=dict(size=11, color="#96a2c8")),
+                    title=dict(text=unit, font=dict(size=11, color=palette["colorbar"])),
                     thickness=9,
                     len=0.55,
                     outlinewidth=0,
-                    tickfont=dict(size=10, color="#96a2c8"),
+                    tickfont=dict(size=10, color=palette["colorbar"]),
                 ),
                 line=dict(color="rgba(255,255,255,0.55)", width=0.8),
             ),
@@ -706,11 +787,11 @@ def map_chart(
                     size=19,
                     color="#ffffff",
                     symbol="star",
-                    line=dict(color="#ffd06b", width=2),
+                    line=dict(color=palette["selected_line"], width=2),
                 ),
                 text=[selected.name_zh if lang == "zh" else selected.name_en],
                 textposition="top center",
-                textfont=dict(color="#ffffff", size=13),
+                textfont=dict(color=palette["selected_text"], size=13),
                 hovertext=f"{selected.name_zh if lang == 'zh' else selected.name_en} · {temp_text(weather['temp'], unit)}",
                 hoverinfo="text",
                 showlegend=False,
@@ -722,15 +803,15 @@ def map_chart(
         lonaxis=dict(range=[72, 140], showgrid=False),
         lataxis=dict(range=[15, 55], showgrid=False),
         showland=True,
-        landcolor="#141b36",
+        landcolor=palette["land"],
         showocean=True,
-        oceancolor="#080d1d",
+        oceancolor=palette["ocean"],
         showlakes=True,
-        lakecolor="#0b1226",
+        lakecolor=palette["lake"],
         showcountries=True,
-        countrycolor="rgba(148,163,255,0.22)",
+        countrycolor=palette["country"],
         showcoastlines=True,
-        coastlinecolor="rgba(148,163,255,0.25)",
+        coastlinecolor=palette["coastline"],
         showframe=False,
         bgcolor="rgba(0,0,0,0)",
     )
@@ -739,11 +820,11 @@ def map_chart(
         margin=dict(l=0, r=0, t=6, b=0),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#aab5d8", size=11),
+        font=dict(color=palette["text"], size=11),
         hoverlabel=dict(
-            bgcolor="#111832",
-            bordercolor="rgba(148,163,255,0.25)",
-            font=dict(color="#eef2ff", size=12),
+            bgcolor=palette["hover_bg"],
+            bordercolor=palette["hover_border"],
+            font=dict(color=palette["hover_text"], size=12),
         ),
     )
     return fig
