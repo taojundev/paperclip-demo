@@ -706,7 +706,7 @@ h1, h2, h3, h4, h5, h6,
     margin: 15px 0 5px;
 }
 .side-status {
-    margin-top: 16px;
+    margin: 16px 0;
     padding: 13px 14px;
     border-radius: 15px;
     border: 1px solid var(--stroke);
