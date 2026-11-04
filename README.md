@@ -1,35 +1,32 @@
-# China Weather Atlas · 中国城市天气
+# China Weather Atlas · 中国城市天气图鉴
 
-A polished Streamlit dashboard for live weather across **35 major Chinese cities** — from
-Harbin's frost to Sanya's tropical breeze. Click any city card to open its full forecast.
+一个精致的 Streamlit 天气仪表盘，实时展示**中国 35 个主要城市**的天气——从哈尔滨的
+冰霜到三亚的热带微风。点击任意城市卡片，即可打开完整预报。
 
-![China Weather Atlas overview](docs/overview.webp)
+![中国城市天气图鉴概览](docs/overview.webp)
 
-## Highlights
+## 功能亮点
 
-- **35 cities** across eight regions, each with current conditions, today's high/low,
-  humidity and rain chance.
-- **Click-through detail page** for every city: hero conditions, eight live metrics,
-  a 7-day forecast strip, a 24-hour temperature/rain chart, a map with the selected city
-  starred, plus sunrise/sunset and air quality.
-- **Interactive China map** (Plotly) coloured by current temperature, paired with a
-  warmest/coldest temperature ladder.
-- **Smart filters** — search in English or Chinese, filter by region, switch between °C
-  and °F, toggle the whole interface between **English and 中文**, switch between
-  **light and dark themes**, and hit "Surprise me" for a random city.
-- **Deep links** — every city has a URL such as `/?city=shanghai`; the back button
-  restores the grid.
-- **Resilient by design** — live Open-Meteo data is cached for 10 minutes and the app
-  falls back to a deterministic, realistic demo forecast if the network is unavailable.
-- **Beautiful glassy UI** — polished dark and light themes, temperature-tinted
-  gradients, condition-aware icons, responsive layout, bilingual labels and a bundled
-  emoji font so icons render even on machines without a system emoji font.
+- **35 座城市**，覆盖八大区域，每座城市都包含当前天气、今日最高/最低气温、湿度和
+  降水概率。
+- **点击进入城市详情页**：主天气信息、八项实时指标、未来 7 天预报条、24 小时
+  气温/降水图表、标注所选城市的地图，以及日出/日落和空气质量。
+- **可交互的中国地图**（Plotly），按当前气温着色，并配有最暖/最冷城市温度阶梯。
+- **智能筛选**——支持中英文搜索、按区域筛选、在 °C 和 °F 之间切换、在**中文与
+  English** 之间切换整个界面、在**浅色与深色主题**之间切换，还可以点“随机推荐”
+  来抽取一座城市。
+- **深链接**——每座城市都有形如 `/?city=shanghai` 的 URL；返回按钮可回到城市网格。
+- **内置容错**——Open-Meteo 实时数据会缓存 10 分钟；网络不可用时，应用会回退到
+  确定性的、贴近真实的演示预报。
+- **精美的玻璃拟态 UI**——打磨过的深色与浅色主题、随气温变化的渐变、随天气变化的
+  图标、响应式布局、双语标签，以及内置的 emoji 字体，即使机器没有系统 emoji 字体
+  也能正常显示图标。
 
-| Detail page | Map & ladder |
+| 详情页 | 地图与温度阶梯 |
 | --- | --- |
-| ![Shanghai detail](docs/detail.webp) | ![Weather map](docs/map.webp) |
+| ![上海详情页](docs/detail.webp) | ![天气地图](docs/map.webp) |
 
-## Quickstart
+## 快速开始
 
 ```bash
 python -m venv .venv
@@ -38,48 +35,46 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Then open <http://localhost:8501>. No API key is required.
+然后打开 <http://localhost:8501>。无需 API 密钥。
 
-## Project layout
+## 项目结构
 
 ```
-app.py                       Streamlit entry point and page routing
+app.py                       Streamlit 入口与页面路由
 weather_dashboard/
-  cities.py                  City catalogue + WMO weather-code metadata
-  api.py                     Open-Meteo fetching, normalisation, demo fallback
-  components.py              HTML fragments and theme-aware Plotly charts
-  styles.py                  Global CSS (dark base + light theme, cards, responsive rules)
-  i18n.py                    English/Chinese copy, date and region labels
-static/emoji.woff2           Subset of Noto Color Emoji used by the UI
-.streamlit/config.toml       Dark theme + static file serving
-tests/                       Offline unit tests + headless AppTest smoke tests
+  cities.py                  城市目录 + WMO 天气代码元数据
+  api.py                     Open-Meteo 请求、数据归一化、演示数据回退
+  components.py              HTML 片段与跟随主题的 Plotly 图表
+  styles.py                  全局 CSS（深色基础 + 浅色主题、卡片、响应式规则）
+  i18n.py                    中英文文案、日期与区域名称
+static/emoji.woff2           UI 使用的 Noto Color Emoji 子集
+.streamlit/config.toml       深色主题 + 静态文件服务
+tests/                       离线单元测试 + 无头 AppTest 冒烟测试
 ```
 
-## Data
+## 数据来源
 
-- Forecasts: [Open-Meteo](https://open-meteo.com/) — current conditions, hourly and
-  7-day data (`Asia/Shanghai` timezone).
-- Air quality: Open-Meteo Air Quality API (European AQI, PM2.5, PM10, O₃, NO₂).
-- Responses are cached for 10 minutes (`st.cache_data`); "Refresh live data" clears
-  the cache. When requests fail, the app shows a clearly-labelled demo dataset instead
-  of an error page.
+- 预报：[Open-Meteo](https://open-meteo.com/)——当前天气、逐小时和未来 7 天数据
+  （`Asia/Shanghai` 时区）。
+- 空气质量：Open-Meteo Air Quality API（欧洲 AQI、PM2.5、PM10、O₃、NO₂）。
+- 响应会缓存 10 分钟（`st.cache_data`）；点击“刷新实时数据”可清除缓存。请求失败
+  时，应用会显示一份明确标注的演示数据集，而不是错误页面。
 
-## Tests
+## 测试
 
 ```bash
 python -m pytest
 ```
 
-The suite covers data normalisation, the offline fallback, HTML fragment regressions
-(blank lines would break Streamlit's markdown HTML blocks), theme palettes and drives
-the app headlessly with `streamlit.testing.v1.AppTest`: overview, search/filter, unit
-switch, language and theme toggles, city navigation and back.
+测试覆盖数据归一化、离线回退、HTML 片段回归（空行会破坏 Streamlit 的 markdown
+HTML 块）、主题配色，并通过 `streamlit.testing.v1.AppTest` 无头驱动应用：概览、
+搜索/筛选、单位切换、语言与主题切换、城市导航以及返回。
 
-## Notes
+## 说明
 
-- The bundled `static/emoji.woff2` is a 33-glyph subset of
-  [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji),
-  licensed under the SIL Open Font License 1.1 (see
-  `static/OFL-NotoColorEmoji.txt`). It is served through Streamlit's static file
-  serving (`server.enableStaticServing = true`).
-- Weather icons use the WMO interpretation codes returned by Open-Meteo.
+- 内置的 `static/emoji.woff2` 是
+  [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
+  的 33 字形子集，采用 SIL Open Font License 1.1 授权（见
+  `static/OFL-NotoColorEmoji.txt`）。它通过 Streamlit 的静态文件服务提供
+  （`server.enableStaticServing = true`）。
+- 天气图标使用 Open-Meteo 返回的 WMO 解释代码。
